@@ -1,0 +1,1 @@
+SELECT * count(originaltitle) from title_basics where runtimeminutes < 25;
