@@ -6,5 +6,8 @@
 /// 1. Deserialize the JSON string into a Postgres plan
 /// 2. Convert the Postgres plan to a datafusion AST
 /// 3. Add hints
+pub fn postgres2sql() {
+
+}
 
 
