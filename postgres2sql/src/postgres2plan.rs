@@ -37,6 +37,26 @@ pub enum PlanNode {
         #[serde(rename = "Filter")]
         filter: Option<String>,
     },
+    #[serde(rename = "Hash Join")]
+    HashJoin {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: String,
+        #[serde(rename = "Join Type")]
+        join_type: String,
+        #[serde(rename = "Inner Unique")]
+        inner_unique: bool,
+        #[serde(rename = "Hash Cond")]
+        hash_cond: String,
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>
+    },
+    #[serde(rename = "Hash")]
+    Hash {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: String,
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>
+    }
 }
 
 
@@ -50,9 +70,21 @@ pub fn parse_json(input: &str) -> Result<PlanNode, serde_json::Error> {
   Ok(plan)
 }
 
-#[test]
-fn test_parse_json () {
-  let input_path = "test_jsons/q1.json";
-  let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
-  println!("{:#?}", parse_json(&input).unwrap());
+#[cfg(test)]
+mod test_parse_json {
+    use super::*;
+
+    #[test]
+    fn test_parse_json () {
+    let input_path = "test_jsons/q1.json";
+    let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
+    println!("{:#?}", parse_json(&input).unwrap());
+    }
+
+    #[test]
+    fn test_parse_json_2 () {
+    let input_path = "test_jsons/q3.json";
+    let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
+    println!("{:#?}", parse_json(&input).unwrap());
+    }
 }
