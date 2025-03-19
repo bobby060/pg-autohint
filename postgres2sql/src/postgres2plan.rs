@@ -1,16 +1,15 @@
 /// Represents a Postgres plan
-
 /// Deserializes a Postgres plan from a JSON string
 use serde::*;
 
-/// Wrapper
+/// Wrapper for parsing the whole plan json 
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanWrapper {
     #[serde(rename = "Plan")]
     plan: PlanNode
 }
 
-/// Plan node types
+/// Plan node type enum for `serde` json parsing
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "Node Type")]
 pub enum PlanNode {
@@ -59,13 +58,18 @@ pub enum PlanNode {
     }
 }
 
-
-pub fn postgres2plan() {
+/// convert postgres plan json string to a tree of PlanNode's
+/// # Arguments
+/// + `input_json_path` - input path to the json file
+/// # Returns
+/// result type of PlanNode tree or an `serde` parsing error 
+pub fn postgres2plan(input_json_path: &str) -> Result<PlanNode, serde_json::Error> {
+    parse_json(input_json_path)
 }
 
 /// parse the input json into a struct representing postgres plan tree
-pub fn parse_json(input: &str) -> Result<PlanNode, serde_json::Error> {
-  let plan_wrappers: Vec<PlanWrapper> = serde_json::from_str(input)?;
+fn parse_json(input_json_path: &str) -> Result<PlanNode, serde_json::Error> {
+  let plan_wrappers: Vec<PlanWrapper> = serde_json::from_str(input_json_path)?;
   let plan = plan_wrappers.first().unwrap().plan.clone();
   Ok(plan)
 }
