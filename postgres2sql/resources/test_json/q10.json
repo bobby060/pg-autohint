@@ -1,4 +1,4 @@
-{
+[{
     "Plan": {
         "Node Type": "Seq Scan",
         "Parallel Aware": false,
@@ -127,4 +127,4 @@
             "Deforming": true
         }
     }
-}
+}]

@@ -1,4 +1,4 @@
-{
+[{
     "Plan": {
         "Node Type": "Limit",
         "Parallel Aware": false,
@@ -23,4 +23,4 @@
             }
         ]
     }
-}
+}]

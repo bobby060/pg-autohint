@@ -14,45 +14,116 @@ struct PlanWrapper {
 #[serde(tag = "Node Type")]
 pub enum PlanNode {
     Aggregate {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
         #[serde(rename = "Strategy")]
         strategy: String,
         #[serde(rename = "Partial Mode")]
         partial_mode: String,
+        #[serde(rename = "Subplan Name")]
+        subplan_name: Option<String>,
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
     },
-    Gather {
-        #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>,
-    },
+    // scans
     #[serde(rename = "Seq Scan")]
     SeqScan {
         #[serde(rename = "Parent Relationship")]
-        parent_relationship: String,
+        parent_relationship: Option<String>,
         #[serde(rename = "Relation Name")]
         relation_name: String,
         #[serde(rename = "Alias")]
-        alias: String,
+        alias: Option<String>,
         #[serde(rename = "Filter")]
         filter: Option<String>,
+    },
+    #[serde(rename = "Index Scan")]
+    IndexScan {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
+        #[serde(rename = "Relation Name")]
+        relation_name: String,
+        #[serde(rename = "Index Name")]
+        index_name: String,
+        #[serde(rename = "Alias")]
+        alias: Option<String>,
+        #[serde(rename = "Filter")]
+        filter: Option<String>,
+        #[serde(rename = "Scan Direction")]
+        scan_direction: Option<String>,
+    },
+    // joins
+    Hash {     // this one might be building hashtable
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>,
     },
     #[serde(rename = "Hash Join")]
     HashJoin {
         #[serde(rename = "Parent Relationship")]
-        parent_relationship: String,
+        parent_relationship: Option<String>,
         #[serde(rename = "Join Type")]
         join_type: String,
         #[serde(rename = "Inner Unique")]
         inner_unique: bool,
         #[serde(rename = "Hash Cond")]
         hash_cond: String,
+        #[serde(rename = "Join Filter")]
+        join_filter: Option<String>,
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
     },
-    #[serde(rename = "Hash")]
-    Hash {
+    #[serde(rename = "Merge Join")]
+    MergeJoin {
         #[serde(rename = "Parent Relationship")]
-        parent_relationship: String,
+        parent_relationship: Option<String>,
+        #[serde(rename = "Join Type")]
+        join_type: String,
+        #[serde(rename = "Inner Unique")]
+        inner_unique: bool,
+        #[serde(rename = "Merge Cond")]
+        merge_cond: String,
+        #[serde(rename = "Join Filter")]
+        join_filter: Option<String>,
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>,
+    },
+    // limit, unique, sort
+    Limit {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
+        #[serde(rename = "Plan Rows")]
+        limit_rows: i64, // NOTICE: this is actually the statistics, but seemed to be the only way to extract limit row count target
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>,
+    },
+    Sort {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
+        #[serde(rename = "Sort Key")]
+        sort_keys: Vec<String>, // will be like [a, b DESC]
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>,
+    },
+    Unique {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>,
+    },
+    // "useless" nodes
+    Append {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
+        #[serde(rename = "Subplans Removed")]
+        subplans_removed: i64,
+        #[serde(rename = "Plans")]
+        children: Option<Vec<PlanNode>>,
+    },
+    Gather {
+        #[serde(rename = "Parent Relationship")]
+        parent_relationship: Option<String>,
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
     },
