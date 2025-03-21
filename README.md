@@ -27,7 +27,10 @@ Create a user with your machines username
 sudo su - postgres
 psql
 
+
 ```
+Run `ALTER USER postgres PASSWORD 'postgres';` to set the password for the postgres user.
+
 Run `CREATE ROLE <username> superuser createdb login;`, where username is your machines username.
 
 Then copy the imdb_postgres_setup.sh to that user and run as postgres. I did this by touching a new file, then pasting the text, but there is probably a better way...

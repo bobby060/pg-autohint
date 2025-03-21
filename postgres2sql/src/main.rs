@@ -1,5 +1,3 @@
-use postgres2sql;
+// use postgres2sql;
 
-fn main() {
-  
-}
+fn main() {}

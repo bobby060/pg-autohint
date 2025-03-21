@@ -2,11 +2,11 @@
 /// Deserializes a Postgres plan from a JSON string
 use serde::*;
 
-/// Wrapper for parsing the whole plan json 
+/// Wrapper for parsing the whole plan json
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanWrapper {
     #[serde(rename = "Plan")]
-    plan: PlanNode
+    plan: PlanNode,
 }
 
 /// Plan node type enum for `serde` json parsing
@@ -47,48 +47,44 @@ pub enum PlanNode {
         #[serde(rename = "Hash Cond")]
         hash_cond: String,
         #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>
+        children: Option<Vec<PlanNode>>,
     },
     #[serde(rename = "Hash")]
     Hash {
         #[serde(rename = "Parent Relationship")]
         parent_relationship: String,
         #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>
-    }
+        children: Option<Vec<PlanNode>>,
+    },
 }
 
 /// convert postgres plan json string to a tree of PlanNode's
 /// # Arguments
 /// + `input_json_path` - input path to the json file
 /// # Returns
-/// result type of PlanNode tree or an `serde` parsing error 
-pub fn postgres2plan(input_json_path: &str) -> Result<PlanNode, serde_json::Error> {
-    parse_json(input_json_path)
+/// result type of PlanNode tree or an `serde` parsing error
+pub fn postgres2plan(input_json: &str) -> Result<PlanNode, serde_json::Error> {
+    parse_json(input_json)
 }
 
 /// parse the input json into a struct representing postgres plan tree
-fn parse_json(input_json_path: &str) -> Result<PlanNode, serde_json::Error> {
-  let plan_wrappers: Vec<PlanWrapper> = serde_json::from_str(input_json_path)?;
-  let plan = plan_wrappers.first().unwrap().plan.clone();
-  Ok(plan)
+fn parse_json(input_json: &str) -> Result<PlanNode, serde_json::Error> {
+    let plan_wrappers: Vec<PlanWrapper> = serde_json::from_str(input_json)?;
+    let plan = plan_wrappers.first().unwrap().plan.clone();
+    Ok(plan)
 }
 
 #[cfg(test)]
 mod test_parse_json {
     use super::*;
-
-    #[test]
-    fn test_parse_json () {
-    let input_path = "test_jsons/q1.json";
-    let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
-    println!("{:#?}", parse_json(&input).unwrap());
+    use test_each_file::test_each_path;
+    fn test_input_plan(input_path: &std::path::Path) {
+        let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
+        postgres2plan(&input).unwrap();
     }
 
-    #[test]
-    fn test_parse_json_2 () {
-    let input_path = "test_jsons/q3.json";
-    let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
-    println!("{:#?}", parse_json(&input).unwrap());
+    // Runs tests for each plan in resources/test_json. Each json also needs to have a corresponding sql file in resources/test_sql.
+    test_each_path! {
+        in "resources/test_json"  => test_input_plan
     }
 }
