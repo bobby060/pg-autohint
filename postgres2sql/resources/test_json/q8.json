@@ -1,0 +1,26 @@
+{
+    "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 0.00,
+        "Total Cost": 181.28,
+        "Plan Rows": 10,
+        "Plan Width": 80,
+        "Plans": [
+            {
+                "Node Type": "Seq Scan",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Relation Name": "title_basics",
+                "Alias": "title_basics",
+                "Startup Cost": 0.00,
+                "Total Cost": 340646.57,
+                "Plan Rows": 18791,
+                "Plan Width": 80,
+                "Filter": "((startyear > 2000) AND (runtimeminutes > 180))"
+            }
+        ]
+    }
+}

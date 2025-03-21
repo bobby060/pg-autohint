@@ -1,0 +1,86 @@
+{
+    "Plan": {
+        "Node Type": "Limit",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 1.34,
+        "Total Cost": 6.78,
+        "Plan Rows": 5,
+        "Plan Width": 22,
+        "Plans": [
+            {
+                "Node Type": "Merge Join",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Join Type": "Inner",
+                "Startup Cost": 1.34,
+                "Total Cost": 1122197.72,
+                "Plan Rows": 1030599,
+                "Plan Width": 22,
+                "Inner Unique": true,
+                "Merge Cond": "(tb.tconst = tc.tconst)",
+                "Join Filter": "((tb.startyear > 2000) OR ((r.num_votes > 1000000) AND (tc.directors !~~ '%Tom%'::text)))",
+                "Plans": [
+                    {
+                        "Node Type": "Merge Join",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Join Type": "Inner",
+                        "Startup Cost": 0.90,
+                        "Total Cost": 623901.79,
+                        "Plan Rows": 1548104,
+                        "Plan Width": 46,
+                        "Inner Unique": true,
+                        "Merge Cond": "(tb.tconst = (r.tconst)::text)",
+                        "Plans": [
+                            {
+                                "Node Type": "Index Scan",
+                                "Parent Relationship": "Outer",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Scan Direction": "Forward",
+                                "Index Name": "title_basics_pkey",
+                                "Relation Name": "title_basics",
+                                "Alias": "tb",
+                                "Startup Cost": 0.43,
+                                "Total Cost": 518716.78,
+                                "Plan Rows": 11541771,
+                                "Plan Width": 32
+                            },
+                            {
+                                "Node Type": "Index Scan",
+                                "Parent Relationship": "Inner",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Scan Direction": "Forward",
+                                "Index Name": "title_ratings_pkey",
+                                "Relation Name": "title_ratings",
+                                "Alias": "r",
+                                "Startup Cost": 0.43,
+                                "Total Cost": 56980.99,
+                                "Plan Rows": 1548104,
+                                "Plan Width": 14
+                            }
+                        ]
+                    },
+                    {
+                        "Node Type": "Index Scan",
+                        "Parent Relationship": "Inner",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Scan Direction": "Forward",
+                        "Index Name": "title_crew_pkey",
+                        "Relation Name": "title_crew",
+                        "Alias": "tc",
+                        "Startup Cost": 0.43,
+                        "Total Cost": 438548.45,
+                        "Plan Rows": 11527534,
+                        "Plan Width": 23
+                    }
+                ]
+            }
+        ]
+    }
+}

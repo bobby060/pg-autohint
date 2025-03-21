@@ -1,0 +1,102 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Hash Join",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Join Type": "Inner",
+            "Startup Cost": 1060726.95,
+            "Total Cost": 10394924.53,
+            "Plan Rows": 91487016,
+            "Plan Width": 34,
+            "Inner Unique": false,
+            "Hash Cond": "(title_principals.tconst = title_basics.tconst)",
+            "Plans": [
+                {
+                    "Node Type": "Hash Join",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Join Type": "Inner",
+                    "Startup Cost": 555562.81,
+                    "Total Cost": 6223014.45,
+                    "Plan Rows": 91487016,
+                    "Plan Width": 24,
+                    "Inner Unique": false,
+                    "Hash Cond": "(title_principals.nconst = (name_basics.nconst)::text)",
+                    "Plans": [
+                        {
+                            "Node Type": "Seq Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Relation Name": "title_principals",
+                            "Alias": "title_principals",
+                            "Startup Cost": 0.00,
+                            "Total Cost": 1767166.16,
+                            "Plan Rows": 91487016,
+                            "Plan Width": 20
+                        },
+                        {
+                            "Node Type": "Hash",
+                            "Parent Relationship": "Inner",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Startup Cost": 293738.58,
+                            "Total Cost": 293738.58,
+                            "Plan Rows": 14261058,
+                            "Plan Width": 24,
+                            "Plans": [
+                                {
+                                    "Node Type": "Seq Scan",
+                                    "Parent Relationship": "Outer",
+                                    "Parallel Aware": false,
+                                    "Async Capable": false,
+                                    "Relation Name": "name_basics",
+                                    "Alias": "name_basics",
+                                    "Startup Cost": 0.00,
+                                    "Total Cost": 293738.58,
+                                    "Plan Rows": 14261058,
+                                    "Plan Width": 24
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "Node Type": "Hash",
+                    "Parent Relationship": "Inner",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 282446.73,
+                    "Total Cost": 282446.73,
+                    "Plan Rows": 11518273,
+                    "Plan Width": 30,
+                    "Plans": [
+                        {
+                            "Node Type": "Seq Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Relation Name": "title_basics",
+                            "Alias": "title_basics",
+                            "Startup Cost": 0.00,
+                            "Total Cost": 282446.73,
+                            "Plan Rows": 11518273,
+                            "Plan Width": 30
+                        }
+                    ]
+                }
+            ]
+        },
+        "JIT": {
+            "Functions": 18,
+            "Options": {
+                "Inlining": true,
+                "Optimization": true,
+                "Expressions": true,
+                "Deforming": true
+            }
+        }
+    }
+]

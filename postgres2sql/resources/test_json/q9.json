@@ -1,0 +1,91 @@
+{
+    "Plan": {
+        "Node Type": "Unique",
+        "Parallel Aware": false,
+        "Async Capable": false,
+        "Startup Cost": 806929.41,
+        "Total Cost": 819075.27,
+        "Plan Rows": 1619448,
+        "Plan Width": 36,
+        "Plans": [
+            {
+                "Node Type": "Sort",
+                "Parent Relationship": "Outer",
+                "Parallel Aware": false,
+                "Async Capable": false,
+                "Startup Cost": 806929.41,
+                "Total Cost": 810978.03,
+                "Plan Rows": 1619448,
+                "Plan Width": 36,
+                "Sort Key": [
+                    "title_basics.primarytitle",
+                    "title_basics.runtimeminutes"
+                ],
+                "Plans": [
+                    {
+                        "Node Type": "Append",
+                        "Parent Relationship": "Outer",
+                        "Parallel Aware": false,
+                        "Async Capable": false,
+                        "Startup Cost": 0.00,
+                        "Total Cost": 551343.07,
+                        "Plan Rows": 1619448,
+                        "Plan Width": 36,
+                        "Subplans Removed": 0,
+                        "Plans": [
+                            {
+                                "Node Type": "Seq Scan",
+                                "Parent Relationship": "Member",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Relation Name": "title_basics",
+                                "Alias": "title_basics",
+                                "Startup Cost": 0.00,
+                                "Total Cost": 311792.14,
+                                "Plan Rows": 1591245,
+                                "Plan Width": 24,
+                                "Filter": "(runtimeminutes < 30)"
+                            },
+                            {
+                                "Node Type": "Gather",
+                                "Parent Relationship": "Member",
+                                "Parallel Aware": false,
+                                "Async Capable": false,
+                                "Startup Cost": 1000.00,
+                                "Total Cost": 231453.69,
+                                "Plan Rows": 28203,
+                                "Plan Width": 24,
+                                "Workers Planned": 2,
+                                "Single Copy": false,
+                                "Plans": [
+                                    {
+                                        "Node Type": "Seq Scan",
+                                        "Parent Relationship": "Outer",
+                                        "Parallel Aware": true,
+                                        "Async Capable": false,
+                                        "Relation Name": "title_basics",
+                                        "Alias": "title_basics_1",
+                                        "Startup Cost": 0.00,
+                                        "Total Cost": 227633.39,
+                                        "Plan Rows": 11751,
+                                        "Plan Width": 24,
+                                        "Filter": "(runtimeminutes > 180)"
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        ]
+    },
+    "JIT": {
+        "Functions": 9,
+        "Options": {
+            "Inlining": true,
+            "Optimization": true,
+            "Expressions": true,
+            "Deforming": true
+        }
+    }
+}
