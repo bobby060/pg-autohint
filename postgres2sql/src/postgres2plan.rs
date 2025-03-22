@@ -35,127 +35,126 @@ pub enum PlanNode {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-
 pub struct Aggregate {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Strategy")]
-    strategy: String,
+    pub strategy: String,
     #[serde(rename = "Partial Mode")]
-    partial_mode: String,
+    pub partial_mode: String,
     #[serde(rename = "Subplan Name")]
-    subplan_name: Option<String>,
+    pub subplan_name: Option<String>,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 // scans
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SeqScan {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Relation Name")]
-    relation_name: String,
+    pub relation_name: String,
     #[serde(rename = "Alias")]
-    alias: Option<String>,
+    pub alias: Option<String>,
     #[serde(rename = "Filter")]
-    filter: Option<String>,
+    pub filter: Option<String>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexScan {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Relation Name")]
-    relation_name: String,
+    pub relation_name: String,
     #[serde(rename = "Index Name")]
-    index_name: String,
+    pub index_name: String,
     #[serde(rename = "Alias")]
-    alias: Option<String>,
+    pub alias: Option<String>,
     #[serde(rename = "Filter")]
-    filter: Option<String>,
+    pub filter: Option<String>,
     #[serde(rename = "Scan Direction")]
-    scan_direction: Option<String>,
+    pub scan_direction: Option<String>,
 }
 // joins
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Hash {
     // this one might be building hashtable
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HashJoin {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Join Type")]
-    join_type: String,
+    pub join_type: String,
     #[serde(rename = "Inner Unique")]
-    inner_unique: bool,
+    pub inner_unique: bool,
     #[serde(rename = "Hash Cond")]
-    hash_cond: String,
+    pub hash_cond: String,
     #[serde(rename = "Join Filter")]
-    join_filter: Option<String>,
+    pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MergeJoin {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Join Type")]
-    join_type: String,
+    pub join_type: String,
     #[serde(rename = "Inner Unique")]
-    inner_unique: bool,
+    pub inner_unique: bool,
     #[serde(rename = "Merge Cond")]
-    merge_cond: String,
+    pub merge_cond: String,
     #[serde(rename = "Join Filter")]
-    join_filter: Option<String>,
+    pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 // limit, unique, sort
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Limit {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Plan Rows")]
-    limit_rows: i64, // NOTICE: this is actually the statistics, but seemed to be the only way to extract limit row count target
+    pub limit_rows: i64, // NOTICE: this is actually the statistics, but seemed to be the only way to extract limit row count target
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Sort {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Sort Key")]
-    sort_keys: Vec<String>, // will be like [a, b DESC]
+    pub sort_keys: Vec<String>, // will be like [a, b DESC]
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Unique {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 // "useless" nodes
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Append {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Subplans Removed")]
-    subplans_removed: i64,
+    pub subplans_removed: i64,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Gather {
     #[serde(rename = "Parent Relationship")]
-    parent_relationship: Option<String>,
+    pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
-    children: Option<Vec<PlanNode>>,
+    pub children: Option<Vec<PlanNode>>,
 }
 
 /// convert postgres plan json string to a tree of PlanNode's
