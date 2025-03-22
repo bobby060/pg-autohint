@@ -1,4 +1,4 @@
-use crate::postgres2plan::PlanNode;
+use crate::postgres2plan::*;
 use sqlparser::ast::helpers::attached_token::AttachedToken;
 use sqlparser::ast::*;
 use sqlparser::tokenizer::Span;
@@ -74,57 +74,75 @@ trait Visit {
 
 impl Visit for PlanNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        let plan = self;
-
-        let projection: Vec<SelectItem> = vec![];
-        let from: Vec<TableWithJoins> = vec![];
-        let group_by: GroupByExpr = GroupByExpr::All(vec![]);
-        let sort_by: Vec<Expr> = vec![];
-        let having: Option<Expr> = None;
-
         /// Conceptuallly, will need to perform the following:
         /// 1. Extract the final projection
         /// 2. Create an expression tree for all filters in the scans
         /// 3. Add each table to the from clause, including joins
-        fn visit_child(plan: PlanNode) -> Result<(), String> {
-            match plan {
-                PlanNode::Aggregate { children, .. } => {
-                    for child in children.unwrap() {
-                        visit_child(child)?;
-                    }
-                }
-                PlanNode::Gather { children, .. } => {
-                    for child in children.unwrap() {
-                        visit_child(child)?;
-                    }
-                }
-                PlanNode::SeqScan {
-                    parent_relationship,
-                    relation_name,
-                    alias,
-                    filter,
-                } => {}
-                PlanNode::HashJoin {
-                    parent_relationship,
-                    join_type,
-                    inner_unique,
-                    hash_cond,
-                    join_filter,
-                    children,
-                } => {}
-                _ => {}
-            }
-            Ok(())
+        ///
+        match self {
+            PlanNode::SeqScan(scan) => scan.visit_plan_node(),
+            PlanNode::IndexScan(scan) => scan.visit_plan_node(),
+            PlanNode::Hash(hash) => hash.visit_plan_node(),
+            PlanNode::HashJoin(join) => join.visit_plan_node(),
+            PlanNode::MergeJoin(join) => join.visit_plan_node(),
+            PlanNode::Limit(limit) => limit.visit_plan_node(),
+            PlanNode::Sort(sort) => sort.visit_plan_node(),
+            PlanNode::Unique(unique) => unique.visit_plan_node(),
+            PlanNode::Append(append) => append.visit_plan_node(),
+            PlanNode::Gather(gather) => gather.visit_plan_node(),
+            _ => Err("Not implemented".to_string()),
+        }
+    }
+}
+
+impl Visit for Aggregate {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for SeqScan {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        let projection: Vec<SelectItem> = vec![];
+        let mut from: Vec<TableWithJoins> = vec![];
+        let mut group_by: GroupByExpr = GroupByExpr::All(vec![]);
+        let mut sort_by: Vec<Expr> = vec![];
+        let mut having: Option<Expr> = None;
+
+        if let Some(filter) = self.filter {
+            let filter = FromStr::from_str(&filter)?;
+            having = Some(filter);
         }
 
-        visit_child(plan);
+        let table = TableWithJoins {
+            joins: vec![],
+            relation: TableFactor::Table {
+                name: ObjectName::from_str(&self.relation_name)?,
+                alias: if let Some(alias) = self.alias {
+                    Some(TableAlias {
+                        name: Ident::from_str(&alias)?,
+                        columns: vec![], // TODO: add columns
+                    })
+                } else {
+                    None
+                },
+                args: None,
+                with_hints: vec![],
+                version: None,
+                with_ordinality: false,
+                partitions: vec![],
+                json_path: None,
+                sample: None,
+                index_hints: vec![],
+            },
+        };
 
         let select = Select {
             select_token: AttachedToken::empty(),
             distinct: None,
             projection: projection,
             into: None,
-            from: from, // From (Table A) | From (Table B) | From (A join B)
+            from: from,
             group_by: group_by,
             top: None,
             top_before_distinct: false,
@@ -143,7 +161,63 @@ impl Visit for PlanNode {
             value_table_mode: None,
         };
 
-        Ok(SetExpr::Select(Box::new(select)))
+        // Ok(SetExpr::Select(Box::new(select)))
+
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for IndexScan {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Hash {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for HashJoin {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for MergeJoin {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Limit {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Sort {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Unique {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Append {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Gather {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
     }
 }
 
@@ -228,6 +302,25 @@ impl FromStr for Value {
     }
 }
 
+impl FromStr for ObjectName {
+    fn from_str(name: &str) -> Result<Self, String> {
+        Ok(ObjectName::from(vec![Ident {
+            value: name.to_string(),
+            quote_style: None,
+            span: Span::empty(),
+        }]))
+    }
+}
+
+impl FromStr for Ident {
+    fn from_str(name: &str) -> Result<Self, String> {
+        Ok(Ident {
+            value: name.to_string(),
+            quote_style: None,
+            span: Span::empty(),
+        })
+    }
+}
 pub fn test() {
     println!();
 }
