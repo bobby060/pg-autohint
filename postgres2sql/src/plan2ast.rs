@@ -32,29 +32,7 @@ pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     // Placeholder for the AST
     let ast = Query {
         with: None,
-        body: Box::new(SetExpr::Select(Box::new(Select {
-            select_token: AttachedToken::empty(),
-            distinct: None,
-            projection: vec![],
-            into: None,
-            from: vec![],
-            group_by: GroupByExpr::All(vec![]),
-            top: None,
-            top_before_distinct: false,
-            lateral_views: vec![],
-            prewhere: None,
-            selection: None,
-            cluster_by: vec![],
-            connect_by: None,
-            distribute_by: vec![],
-            sort_by: vec![],
-            having: None,
-            named_window: vec![],
-            qualify: None,
-            window_before_qualify: false,
-            flavor: SelectFlavor::Standard,
-            value_table_mode: None,
-        }))),
+        body: Box::new(expr),
         order_by: None,
         limit: None,
         limit_by: Vec::new(),
@@ -103,26 +81,37 @@ impl Visit for Aggregate {
 
 impl Visit for SeqScan {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        let projection: Vec<SelectItem> = vec![];
+        // TODO: update to use projection
+        let projection: Vec<SelectItem> = vec![SelectItem::Wildcard(WildcardAdditionalOptions {
+            wildcard_token: AttachedToken::empty(),
+            opt_ilike: None,
+            opt_exclude: None,
+            opt_except: None,
+            opt_replace: None,
+            opt_rename: None,
+        })];
         let mut from: Vec<TableWithJoins> = vec![];
-        let mut group_by: GroupByExpr = GroupByExpr::All(vec![]);
-        let mut sort_by: Vec<Expr> = vec![];
-        let mut having: Option<Expr> = None;
 
-        if let Some(filter) = self.filter {
+        let having: Option<Expr> = if let Some(filter) = self.filter {
             let filter = FromStr::from_str(&filter)?;
-            having = Some(filter);
-        }
+            Some(filter)
+        } else {
+            None
+        };
 
         let table = TableWithJoins {
             joins: vec![],
             relation: TableFactor::Table {
                 name: ObjectName::from_str(&self.relation_name)?,
                 alias: if let Some(alias) = self.alias {
-                    Some(TableAlias {
-                        name: Ident::from_str(&alias)?,
-                        columns: vec![], // TODO: add columns
-                    })
+                    if alias != self.relation_name {
+                        Some(TableAlias {
+                            name: Ident::from_str(&alias)?,
+                            columns: vec![], // TODO: add columns
+                        })
+                    } else {
+                        None
+                    }
                 } else {
                     None
                 },
@@ -137,13 +126,16 @@ impl Visit for SeqScan {
             },
         };
 
-        let select = Select {
+        from.push(table);
+
+        let mut select = Select {
             select_token: AttachedToken::empty(),
             distinct: None,
             projection: projection,
             into: None,
             from: from,
-            group_by: group_by,
+            // SeqScan node won't have a group by
+            group_by: GroupByExpr::Expressions(vec![], vec![]),
             top: None,
             top_before_distinct: false,
             lateral_views: vec![],
@@ -152,7 +144,8 @@ impl Visit for SeqScan {
             cluster_by: vec![],
             connect_by: None,
             distribute_by: vec![],
-            sort_by: sort_by,
+            // SeqScan node won't have a sort by
+            sort_by: vec![],
             having: having,
             named_window: vec![],
             qualify: None,
@@ -161,9 +154,7 @@ impl Visit for SeqScan {
             value_table_mode: None,
         };
 
-        // Ok(SetExpr::Select(Box::new(select)))
-
-        Err("Not implemented".to_string())
+        Ok(SetExpr::Select(Box::new(select)))
     }
 }
 
@@ -181,6 +172,12 @@ impl Visit for Hash {
 
 impl Visit for HashJoin {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
+        let mut children_exprs = vec![];
+        for child in self.children.unwrap() {
+            let child_expr = child.visit_plan_node()?;
+            children_exprs.push(child_expr);
+        }
+
         Err("Not implemented".to_string())
     }
 }
