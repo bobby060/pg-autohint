@@ -52,11 +52,11 @@ trait Visit {
 
 impl Visit for PlanNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        /// Conceptuallly, will need to perform the following:
-        /// 1. Extract the final projection
-        /// 2. Create an expression tree for all filters in the scans
-        /// 3. Add each table to the from clause, including joins
-        ///
+        // Conceptuallly, will need to perform the following:
+        // 1. Extract the final projection
+        // 2. Create an expression tree for all filters in the scans
+        // 3. Add each table to the from clause, including joins
+        //
         match self {
             PlanNode::SeqScan(scan) => ScanNode::SeqScan(scan).visit_plan_node(),
             PlanNode::IndexScan(scan) => ScanNode::IndexScan(scan).visit_plan_node(),
@@ -107,7 +107,7 @@ impl Visit for ScanNode {
                     if alias != self.get_relation_name() {
                         Some(TableAlias {
                             name: Ident::from_str(&alias)?,
-                            columns: vec![], // TODO: add columns
+                            columns: vec![], // TODO: add columns, add test cases with multiple columns
                         })
                     } else {
                         None
@@ -158,12 +158,6 @@ impl Visit for ScanNode {
     }
 }
 
-impl Visit for IndexScan {
-    fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
-    }
-}
-
 impl Visit for Hash {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         Err("Not implemented".to_string())
@@ -208,8 +202,12 @@ impl Visit for SetNode {
         if let Some(children) = children {
             let set_expr = SetExpr::SetOperation {
                 op: self.get_operator(),
+
+                // TODO: Do we need to have different quantifiers for Union/Intersect/Except?
                 set_quantifier: SetQuantifier::Distinct,
                 left: Box::new(children[0].clone().visit_plan_node()?),
+                // TODO: add test cases that have more than 2 children for Union/Intersect
+                // TODO: add test cases for other set operations (Except)
                 // Make the right, but if more than 2 children, make the right the append with the rest of the children
                 right: Box::new(if children.len() == 2 {
                     children[1].clone().visit_plan_node()?

@@ -28,10 +28,8 @@ pub enum PlanNode {
     // limit, unique, sort
     Limit(Limit),
     Sort(Sort),
-    Unique(Unique),
-    // "useless" nodes
-    Append(Append),
-    // SetNode(SetNode),
+    Unique(Unique), // Alias for distinct
+    Append(Append), // Alias for Union (we think?)
     Gather(Gather),
 }
 
@@ -134,6 +132,7 @@ pub struct Sort {
     pub children: Option<Vec<PlanNode>>,
 }
 
+// Group of all scan operators
 #[derive(Debug, Serialize, Deserialize, Clone)]
 
 pub enum ScanNode {
@@ -164,6 +163,7 @@ impl ScanNode {
     }
 }
 
+// Group of all join operators
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum JoinNode {
     HashJoin(HashJoin),
@@ -213,6 +213,7 @@ impl JoinNode {
     }
 }
 
+// Group of all set operators
 #[derive(Debug, Serialize, Deserialize, Clone)]
 
 pub enum SetNode {
