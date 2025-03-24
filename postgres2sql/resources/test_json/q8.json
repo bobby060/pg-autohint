@@ -7,6 +7,7 @@
         "Total Cost": 181.28,
         "Plan Rows": 10,
         "Plan Width": 80,
+        "Output": ["tconst", "titletype", "primarytitle", "originaltitle", "isadult", "startyear", "endyear", "runtimeminutes", "genres"],
         "Plans": [
             {
                 "Node Type": "Seq Scan",
@@ -19,6 +20,7 @@
                 "Total Cost": 340646.57,
                 "Plan Rows": 18791,
                 "Plan Width": 80,
+                "Output": ["tconst", "titletype", "primarytitle", "originaltitle", "isadult", "startyear", "endyear", "runtimeminutes", "genres"],
                 "Filter": "((startyear > 2000) AND (runtimeminutes > 180))"
             }
         ]

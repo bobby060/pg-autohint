@@ -20,10 +20,14 @@ pub enum PlanNode {
         partial_mode: String,
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
+        #[serde(rename = "Output")]
+        output: Vec<String>,
     },
     Gather {
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
+        #[serde(rename = "Output")]
+        output: Vec<String>,
     },
     #[serde(rename = "Seq Scan")]
     SeqScan {
@@ -35,6 +39,8 @@ pub enum PlanNode {
         alias: String,
         #[serde(rename = "Filter")]
         filter: Option<String>,
+        #[serde(rename = "Output")]
+        output: Vec<String>,
     },
     #[serde(rename = "Hash Join")]
     HashJoin {
@@ -48,6 +54,8 @@ pub enum PlanNode {
         hash_cond: String,
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
+        #[serde(rename = "Output")]
+        output: Vec<String>,
     },
     #[serde(rename = "Hash")]
     Hash {
@@ -55,6 +63,8 @@ pub enum PlanNode {
         parent_relationship: String,
         #[serde(rename = "Plans")]
         children: Option<Vec<PlanNode>>,
+        #[serde(rename = "Output")]
+        output: Vec<String>,
     },
 }
 

@@ -1,0 +1,17 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Seq Scan",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Relation Name": "title_basics",
+            "Schema": "public",
+            "Alias": "title_basics",
+            "Startup Cost": 0.00,
+            "Total Cost": 282841.05,
+            "Plan Rows": 11532105,
+            "Plan Width": 80,
+            "Output": ["tconst", "titletype", "primarytitle", "originaltitle", "isadult", "startyear", "endyear", "runtimeminutes", "genres"]
+        }
+    }
+]

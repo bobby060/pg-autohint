@@ -10,6 +10,7 @@
             "Total Cost": 229731.03,
             "Plan Rows": 1,
             "Plan Width": 8,
+            "Output": ["count(originaltitle)"],
             "Plans": [
                 {
                     "Node Type": "Gather",
@@ -20,6 +21,7 @@
                     "Total Cost": 229731.01,
                     "Plan Rows": 2,
                     "Plan Width": 8,
+                    "Output": ["(PARTIAL count(originaltitle))"],
                     "Workers Planned": 2,
                     "Single Copy": false,
                     "Plans": [
@@ -34,6 +36,7 @@
                             "Total Cost": 228730.81,
                             "Plan Rows": 1,
                             "Plan Width": 8,
+                            "Output": ["PARTIAL count(originaltitle)"],
                             "Plans": [
                                 {
                                     "Node Type": "Seq Scan",
@@ -46,6 +49,7 @@
                                     "Total Cost": 227255.01,
                                     "Plan Rows": 590319,
                                     "Plan Width": 20,
+                                    "Output": ["tconst", "titletype", "primarytitle", "originaltitle", "isadult", "startyear", "endyear", "runtimeminutes", "genres"],
                                     "Filter": "(runtimeminutes < 25)"
                                 }
                             ]
