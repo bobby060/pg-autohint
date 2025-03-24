@@ -58,15 +58,15 @@ impl Visit for PlanNode {
         /// 3. Add each table to the from clause, including joins
         ///
         match self {
-            PlanNode::SeqScan(scan) => scan.visit_plan_node(),
-            PlanNode::IndexScan(scan) => scan.visit_plan_node(),
+            PlanNode::SeqScan(scan) => ScanNode::SeqScan(scan).visit_plan_node(),
+            PlanNode::IndexScan(scan) => ScanNode::IndexScan(scan).visit_plan_node(),
             PlanNode::Hash(hash) => hash.visit_plan_node(),
             PlanNode::HashJoin(join) => join.visit_plan_node(),
             PlanNode::MergeJoin(join) => join.visit_plan_node(),
             PlanNode::Limit(limit) => limit.visit_plan_node(),
             PlanNode::Sort(sort) => sort.visit_plan_node(),
-            PlanNode::Unique(unique) => unique.visit_plan_node(),
-            PlanNode::Append(append) => append.visit_plan_node(),
+            PlanNode::Unique(unique) => SetNode::Unique(unique).visit_plan_node(),
+            PlanNode::Append(append) => SetNode::Append(append).visit_plan_node(),
             PlanNode::Gather(gather) => gather.visit_plan_node(),
             _ => Err("Not implemented".to_string()),
         }
@@ -79,7 +79,7 @@ impl Visit for Aggregate {
     }
 }
 
-impl Visit for SeqScan {
+impl Visit for ScanNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         // TODO: update to use projection
         let projection: Vec<SelectItem> = vec![SelectItem::Wildcard(WildcardAdditionalOptions {
@@ -92,7 +92,7 @@ impl Visit for SeqScan {
         })];
         let mut from: Vec<TableWithJoins> = vec![];
 
-        let having: Option<Expr> = if let Some(filter) = self.filter {
+        let having: Option<Expr> = if let Some(filter) = self.get_filter() {
             let filter = FromStr::from_str(&filter)?;
             Some(filter)
         } else {
@@ -102,9 +102,9 @@ impl Visit for SeqScan {
         let table = TableWithJoins {
             joins: vec![],
             relation: TableFactor::Table {
-                name: ObjectName::from_str(&self.relation_name)?,
-                alias: if let Some(alias) = self.alias {
-                    if alias != self.relation_name {
+                name: ObjectName::from_str(&self.get_relation_name())?,
+                alias: if let Some(alias) = self.get_alias() {
+                    if alias != self.get_relation_name() {
                         Some(TableAlias {
                             name: Ident::from_str(&alias)?,
                             columns: vec![], // TODO: add columns
@@ -128,7 +128,7 @@ impl Visit for SeqScan {
 
         from.push(table);
 
-        let mut select = Select {
+        let select = Select {
             select_token: AttachedToken::empty(),
             distinct: None,
             projection: projection,
@@ -200,21 +200,38 @@ impl Visit for Sort {
     }
 }
 
-impl Visit for Unique {
+impl Visit for SetNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
-    }
-}
+        let children = self.get_children();
 
-impl Visit for Append {
-    fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        let mut append_with_less_children = self.clone();
+        if let Some(children) = children {
+            let set_expr = SetExpr::SetOperation {
+                op: self.get_operator(),
+                set_quantifier: SetQuantifier::Distinct,
+                left: Box::new(children[0].clone().visit_plan_node()?),
+                // Make the right, but if more than 2 children, make the right the append with the rest of the children
+                right: Box::new(if children.len() == 2 {
+                    children[1].clone().visit_plan_node()?
+                } else {
+                    append_with_less_children.set_children(children[1..].to_vec());
+                    append_with_less_children.visit_plan_node()?
+                }),
+            };
+
+            Ok(set_expr)
+        } else {
+            Err("No children".to_string())
+        }
     }
 }
 
 impl Visit for Gather {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        if let Some(children) = self.children {
+            return Ok(children.get(0).unwrap().clone().visit_plan_node()?);
+        }
+        Err("No children".to_string())
     }
 }
 
