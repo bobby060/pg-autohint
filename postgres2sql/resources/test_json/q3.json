@@ -8,6 +8,7 @@
             "Total Cost": 2028012.56,
             "Plan Rows": 256,
             "Plan Width": 14,
+            "Output": ["name_basics.primaryname"],
             "Workers Planned": 2,
             "Single Copy": false,
             "Plans": [
@@ -21,6 +22,7 @@
                     "Total Cost": 2026986.96,
                     "Plan Rows": 107,
                     "Plan Width": 14,
+                    "Output": ["name_basics.primaryname"],
                     "Inner Unique": false,
                     "Hash Cond": "(title_principals.nconst = (name_basics.nconst)::text)",
                     "Plans": [
@@ -34,6 +36,7 @@
                             "Total Cost": 1672522.01,
                             "Plan Rows": 107,
                             "Plan Width": 10,
+                            "Output": ["title_principals.nconst"],
                             "Inner Unique": false,
                             "Hash Cond": "(title_principals.tconst = title_basics.tconst)",
                             "Plans": [
@@ -48,6 +51,7 @@
                                     "Total Cost": 1424089.85,
                                     "Plan Rows": 538,
                                     "Plan Width": 20,
+                                    "Output": ["title_principals.nconst", "title_principals.tconst"],
                                     "Filter": "((category = 'actor'::text) AND (job = 'actor'::text))"
                                 },
                                 {
@@ -59,6 +63,7 @@
                                     "Total Cost": 227255.01,
                                     "Plan Rows": 950616,
                                     "Plan Width": 10,
+                                    "Output": ["title_basics.tconst"],
                                     "Plans": [
                                         {
                                             "Node Type": "Seq Scan",
@@ -71,6 +76,7 @@
                                             "Total Cost": 227255.01,
                                             "Plan Rows": 950616,
                                             "Plan Width": 10,
+                                            "Output": ["title_basics.tconst"],
                                             "Filter": "(genres ~~ '%Comedy%'::text)"
                                         }
                                     ]
@@ -86,6 +92,7 @@
                             "Total Cost": 210549.08,
                             "Plan Rows": 5942108,
                             "Plan Width": 24,
+                            "Output": ["name_basics.primaryname", "name_basics.nconst"],
                             "Plans": [
                                 {
                                     "Node Type": "Seq Scan",
@@ -97,7 +104,8 @@
                                     "Startup Cost": 0.00,
                                     "Total Cost": 210549.08,
                                     "Plan Rows": 5942108,
-                                    "Plan Width": 24
+                                    "Plan Width": 24,
+                                    "Output": ["name_basics.primaryname", "name_basics.nconst"]
                                 }
                             ]
                         }

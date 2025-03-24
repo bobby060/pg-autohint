@@ -8,6 +8,7 @@
         "Total Cost": 819075.27,
         "Plan Rows": 1619448,
         "Plan Width": 36,
+        "Output": ["title_basics.primarytitle", "title_basics.runtimeminutes"],
         "Plans": [
             {
                 "Node Type": "Sort",
@@ -18,6 +19,7 @@
                 "Total Cost": 810978.03,
                 "Plan Rows": 1619448,
                 "Plan Width": 36,
+                "Output": ["title_basics.primarytitle", "title_basics.runtimeminutes"],
                 "Sort Key": [
                     "title_basics.primarytitle",
                     "title_basics.runtimeminutes"
@@ -45,6 +47,7 @@
                                 "Total Cost": 311792.14,
                                 "Plan Rows": 1591245,
                                 "Plan Width": 24,
+                                "Output": ["title_basics.primarytitle", "title_basics.runtimeminutes"],
                                 "Filter": "(runtimeminutes < 30)"
                             },
                             {
@@ -56,6 +59,7 @@
                                 "Total Cost": 231453.69,
                                 "Plan Rows": 28203,
                                 "Plan Width": 24,
+                                "Output": ["title_basics_1.primarytitle", "title_basics_1.runtimeminutes"],
                                 "Workers Planned": 2,
                                 "Single Copy": false,
                                 "Plans": [
@@ -70,6 +74,7 @@
                                         "Total Cost": 227633.39,
                                         "Plan Rows": 11751,
                                         "Plan Width": 24,
+                                        "Output": ["title_basics_1.primarytitle", "title_basics_1.runtimeminutes"],
                                         "Filter": "(runtimeminutes > 180)"
                                     }
                                 ]
