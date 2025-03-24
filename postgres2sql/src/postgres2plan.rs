@@ -179,7 +179,8 @@ mod test_parse_json {
     use test_each_file::test_each_path;
     fn test_input_plan(input_path: &std::path::Path) {
         let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
-        postgres2plan(&input).unwrap();
+        let result = postgres2plan(&input).unwrap();
+        println!("{:#?}", result)
     }
 
     // Runs tests for each plan in resources/test_json. Each json also needs to have a corresponding sql file in resources/test_sql.
