@@ -45,6 +45,8 @@ pub struct Aggregate {
     pub subplan_name: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 // scans
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -57,6 +59,8 @@ pub struct SeqScan {
     pub alias: Option<String>,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexScan {
@@ -72,6 +76,8 @@ pub struct IndexScan {
     pub filter: Option<String>,
     #[serde(rename = "Scan Direction")]
     pub scan_direction: Option<String>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 // joins
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -81,6 +87,8 @@ pub struct Hash {
     pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HashJoin {
@@ -96,6 +104,8 @@ pub struct HashJoin {
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MergeJoin {
@@ -111,6 +121,8 @@ pub struct MergeJoin {
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 // limit, unique, sort
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -121,6 +133,8 @@ pub struct Limit {
     pub limit_rows: i64, // NOTICE: this is actually the statistics, but seemed to be the only way to extract limit row count target
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Sort {
@@ -130,6 +144,8 @@ pub struct Sort {
     pub sort_keys: Vec<String>, // will be like [a, b DESC]
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 
 // Group of all scan operators
@@ -251,6 +267,8 @@ pub struct Unique {
     pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 // "useless" nodes
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -268,6 +286,8 @@ pub struct Gather {
     pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 
 /// convert postgres plan json string to a tree of PlanNode's
