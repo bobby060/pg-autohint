@@ -1,17 +1,50 @@
 [
     {
         "Plan": {
-            "Node Type": "Seq Scan",
+            "Node Type": "Limit",
             "Parallel Aware": false,
             "Async Capable": false,
-            "Relation Name": "title_basics",
-            "Schema": "public",
-            "Alias": "title_basics",
             "Startup Cost": 0.00,
-            "Total Cost": 282841.05,
-            "Plan Rows": 11532105,
+            "Total Cost": 1.23,
+            "Plan Rows": 50,
             "Plan Width": 80,
-            "Output": ["tconst", "titletype", "primarytitle", "originaltitle", "isadult", "startyear", "endyear", "runtimeminutes", "genres"]
+            "Output": [
+                "tconst",
+                "titletype",
+                "primarytitle",
+                "originaltitle",
+                "isadult",
+                "startyear",
+                "endyear",
+                "runtimeminutes",
+                "genres"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Seq Scan",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Relation Name": "title_basics",
+                    "Schema": "public",
+                    "Alias": "title_basics",
+                    "Startup Cost": 0.00,
+                    "Total Cost": 283144.89,
+                    "Plan Rows": 11549689,
+                    "Plan Width": 80,
+                    "Output": [
+                        "tconst",
+                        "titletype",
+                        "primarytitle",
+                        "originaltitle",
+                        "isadult",
+                        "startyear",
+                        "endyear",
+                        "runtimeminutes",
+                        "genres"
+                    ]
+                }
+            ]
         }
     }
 ]

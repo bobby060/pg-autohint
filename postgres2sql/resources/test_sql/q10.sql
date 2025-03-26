@@ -14,4 +14,5 @@ where startyear > (
             where primaryname like 'Tom%'
         )
     )
-);
+)
+limit 10;

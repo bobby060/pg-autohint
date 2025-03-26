@@ -46,7 +46,7 @@ pub struct Aggregate {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 // scans
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -60,7 +60,7 @@ pub struct SeqScan {
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexScan {
@@ -77,7 +77,7 @@ pub struct IndexScan {
     #[serde(rename = "Scan Direction")]
     pub scan_direction: Option<String>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 // joins
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -88,7 +88,7 @@ pub struct Hash {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct HashJoin {
@@ -105,7 +105,7 @@ pub struct HashJoin {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct MergeJoin {
@@ -122,7 +122,7 @@ pub struct MergeJoin {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 // limit, unique, sort
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -134,7 +134,7 @@ pub struct Limit {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Sort {
@@ -145,7 +145,7 @@ pub struct Sort {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 
 // Group of all scan operators
@@ -268,7 +268,7 @@ pub struct Unique {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 // "useless" nodes
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -287,7 +287,7 @@ pub struct Gather {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
-    output: Vec<String>,
+    pub output: Option<Vec<String>>,
 }
 
 /// convert postgres plan json string to a tree of PlanNode's

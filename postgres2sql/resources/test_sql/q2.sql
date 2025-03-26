@@ -1,1 +1,1 @@
-select * from title_basics;
+select * from title_basics limit 50;
