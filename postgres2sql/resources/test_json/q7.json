@@ -1,4 +1,4 @@
-{
+[{
     "Plan": {
         "Node Type": "Limit",
         "Parallel Aware": false,
@@ -7,6 +7,7 @@
         "Total Cost": 6.78,
         "Plan Rows": 5,
         "Plan Width": 22,
+        "Output": ["tb.primarytitle", "tb.startyear"],
         "Plans": [
             {
                 "Node Type": "Merge Join",
@@ -18,6 +19,7 @@
                 "Total Cost": 1122197.72,
                 "Plan Rows": 1030599,
                 "Plan Width": 22,
+                "Output": ["tb.primarytitle", "tb.startyear"],
                 "Inner Unique": true,
                 "Merge Cond": "(tb.tconst = tc.tconst)",
                 "Join Filter": "((tb.startyear > 2000) OR ((r.num_votes > 1000000) AND (tc.directors !~~ '%Tom%'::text)))",
@@ -32,6 +34,7 @@
                         "Total Cost": 623901.79,
                         "Plan Rows": 1548104,
                         "Plan Width": 46,
+                        "Output": ["r.tconst", "r.num_votes", "tc.tconst", "tc.directors"],
                         "Inner Unique": true,
                         "Merge Cond": "(tb.tconst = (r.tconst)::text)",
                         "Plans": [
@@ -47,7 +50,8 @@
                                 "Startup Cost": 0.43,
                                 "Total Cost": 518716.78,
                                 "Plan Rows": 11541771,
-                                "Plan Width": 32
+                                "Plan Width": 32,
+                                "Output": ["tb.tconst", "tb.titletype", "tb.primarytitle", "tb.originaltitle", "tb.isadult", "tb.startyear", "tb.endyear", "tb.runtimeminutes", "tb.genres"]
                             },
                             {
                                 "Node Type": "Index Scan",
@@ -61,7 +65,8 @@
                                 "Startup Cost": 0.43,
                                 "Total Cost": 56980.99,
                                 "Plan Rows": 1548104,
-                                "Plan Width": 14
+                                "Plan Width": 14,
+                                "Output": ["r.tconst", "r.average_rating", "r.num_votes"]
                             }
                         ]
                     },
@@ -77,10 +82,11 @@
                         "Startup Cost": 0.43,
                         "Total Cost": 438548.45,
                         "Plan Rows": 11527534,
-                        "Plan Width": 23
+                        "Plan Width": 23,
+                        "Output": ["tc.tconst", "tc.directors", "tc.writers"]
                     }
                 ]
             }
         ]
     }
-}
+}]

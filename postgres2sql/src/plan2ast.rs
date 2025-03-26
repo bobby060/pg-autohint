@@ -1,18 +1,27 @@
-use crate::postgres2plan::PlanNode;
+use crate::postgres2plan::*;
 use sqlparser::ast::helpers::attached_token::AttachedToken;
 use sqlparser::ast::*;
+use sqlparser::tokenizer::Span;
 /// Given a Postgres plan, convert it to a datafusion AST
 ///
 ///
 ///
 ///
-pub fn plan2ast(_plan: PlanNode) -> Result<Query, String> {
+pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     // 1. Build body (SetExpr)
+    // if let PlanNode::Limit {
+    //     limit_rows,
+    //     children,
+    //     ..
+    // } = plan
+    // {
+    //     let limit = LimitClause::from_plan_node(plan)?;
+    //     let plan = children.unwrap()[0];
+    // }
 
     // 1.1 If select:
-    // 1.1.1 Build projection
-    // 1.1.2 Build from
-    // 1.1.3 Build having
+    // Call build_select
+    let expr = plan.visit_plan_node()?;
 
     // 1.2 If set, build of children recursively
 
@@ -23,29 +32,7 @@ pub fn plan2ast(_plan: PlanNode) -> Result<Query, String> {
     // Placeholder for the AST
     let ast = Query {
         with: None,
-        body: Box::new(SetExpr::Select(Box::new(Select {
-            select_token: AttachedToken::empty(),
-            distinct: None,
-            projection: vec![],
-            into: None,
-            from: vec![],
-            group_by: GroupByExpr::All(vec![]),
-            top: None,
-            top_before_distinct: false,
-            lateral_views: vec![],
-            prewhere: None,
-            selection: None,
-            cluster_by: vec![],
-            connect_by: None,
-            distribute_by: vec![],
-            sort_by: vec![],
-            having: None,
-            named_window: vec![],
-            qualify: None,
-            window_before_qualify: false,
-            flavor: SelectFlavor::Standard,
-            value_table_mode: None,
-        }))),
+        body: Box::new(expr),
         order_by: None,
         limit: None,
         limit_by: Vec::new(),
@@ -59,6 +46,293 @@ pub fn plan2ast(_plan: PlanNode) -> Result<Query, String> {
     Ok(ast)
 }
 
+trait Visit {
+    fn visit_plan_node(self) -> Result<SetExpr, String>;
+}
+
+impl Visit for PlanNode {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        // Conceptuallly, will need to perform the following:
+        // 1. Extract the final projection
+        // 2. Create an expression tree for all filters in the scans
+        // 3. Add each table to the from clause, including joins
+        //
+        match self {
+            PlanNode::SeqScan(scan) => ScanNode::SeqScan(scan).visit_plan_node(),
+            PlanNode::IndexScan(scan) => ScanNode::IndexScan(scan).visit_plan_node(),
+            PlanNode::Hash(hash) => hash.visit_plan_node(),
+            PlanNode::HashJoin(join) => join.visit_plan_node(),
+            PlanNode::MergeJoin(join) => join.visit_plan_node(),
+            PlanNode::Limit(limit) => limit.visit_plan_node(),
+            PlanNode::Sort(sort) => sort.visit_plan_node(),
+            PlanNode::Unique(unique) => SetNode::Unique(unique).visit_plan_node(),
+            PlanNode::Append(append) => SetNode::Append(append).visit_plan_node(),
+            PlanNode::Gather(gather) => gather.visit_plan_node(),
+            _ => Err("Not implemented".to_string()),
+        }
+    }
+}
+
+impl Visit for Aggregate {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for ScanNode {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        // TODO: update to use projection
+        let projection: Vec<SelectItem> = vec![SelectItem::Wildcard(WildcardAdditionalOptions {
+            wildcard_token: AttachedToken::empty(),
+            opt_ilike: None,
+            opt_exclude: None,
+            opt_except: None,
+            opt_replace: None,
+            opt_rename: None,
+        })];
+        let mut from: Vec<TableWithJoins> = vec![];
+
+        let having: Option<Expr> = if let Some(filter) = self.get_filter() {
+            let filter = FromStr::from_str(&filter)?;
+            Some(filter)
+        } else {
+            None
+        };
+
+        let table = TableWithJoins {
+            joins: vec![],
+            relation: TableFactor::Table {
+                name: ObjectName::from_str(&self.get_relation_name())?,
+                alias: if let Some(alias) = self.get_alias() {
+                    if alias != self.get_relation_name() {
+                        Some(TableAlias {
+                            name: Ident::from_str(&alias)?,
+                            columns: vec![], // TODO: add columns, add test cases with multiple columns
+                        })
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                },
+                args: None,
+                with_hints: vec![],
+                version: None,
+                with_ordinality: false,
+                partitions: vec![],
+                json_path: None,
+                sample: None,
+                index_hints: vec![],
+            },
+        };
+
+        from.push(table);
+
+        let select = Select {
+            select_token: AttachedToken::empty(),
+            distinct: None,
+            projection: projection,
+            into: None,
+            from: from,
+            // SeqScan node won't have a group by
+            group_by: GroupByExpr::Expressions(vec![], vec![]),
+            top: None,
+            top_before_distinct: false,
+            lateral_views: vec![],
+            prewhere: None,
+            selection: None,
+            cluster_by: vec![],
+            connect_by: None,
+            distribute_by: vec![],
+            // SeqScan node won't have a sort by
+            sort_by: vec![],
+            having: having,
+            named_window: vec![],
+            qualify: None,
+            window_before_qualify: false,
+            flavor: SelectFlavor::Standard,
+            value_table_mode: None,
+        };
+
+        Ok(SetExpr::Select(Box::new(select)))
+    }
+}
+
+impl Visit for Hash {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for HashJoin {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        let mut children_exprs = vec![];
+        for child in self.children.unwrap() {
+            let child_expr = child.visit_plan_node()?;
+            children_exprs.push(child_expr);
+        }
+
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for MergeJoin {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Limit {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for Sort {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        Err("Not implemented".to_string())
+    }
+}
+
+impl Visit for SetNode {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        let children = self.get_children();
+
+        let mut append_with_less_children = self.clone();
+        if let Some(children) = children {
+            let set_expr = SetExpr::SetOperation {
+                op: self.get_operator(),
+
+                // TODO: Do we need to have different quantifiers for Union/Intersect/Except?
+                set_quantifier: SetQuantifier::Distinct,
+                left: Box::new(children[0].clone().visit_plan_node()?),
+                // TODO: add test cases that have more than 2 children for Union/Intersect
+                // TODO: add test cases for other set operations (Except)
+                // Make the right, but if more than 2 children, make the right the append with the rest of the children
+                right: Box::new(if children.len() == 2 {
+                    children[1].clone().visit_plan_node()?
+                } else {
+                    append_with_less_children.set_children(children[1..].to_vec());
+                    append_with_less_children.visit_plan_node()?
+                }),
+            };
+
+            Ok(set_expr)
+        } else {
+            Err("No children".to_string())
+        }
+    }
+}
+
+impl Visit for Gather {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        if let Some(children) = self.children {
+            return Ok(children.get(0).unwrap().clone().visit_plan_node()?);
+        }
+        Err("No children".to_string())
+    }
+}
+
+trait FromStr: Sized {
+    fn from_str(s: &str) -> Result<Self, String>;
+}
+
+impl FromStr for Expr {
+    fn from_str(filter: &str) -> Result<Self, String> {
+        let filter = filter.replace("(", "").replace(")", "");
+
+        // Might need better split for more complex filters
+        let filter = filter.split(" ").collect::<Vec<&str>>();
+
+        let str_operator = filter[1];
+
+        let operator = match str_operator {
+            "=" => BinaryOperator::Eq,
+            ">" => BinaryOperator::Gt,
+            "<" => BinaryOperator::Lt,
+            ">=" => BinaryOperator::GtEq,
+            "<=" => BinaryOperator::LtEq,
+            "!=" => BinaryOperator::NotEq,
+            "AND" => BinaryOperator::And,
+            "OR" => BinaryOperator::Or,
+            "~~" => BinaryOperator::PGLikeMatch,
+            "!~~" => BinaryOperator::PGNotILikeMatch,
+            "+" => BinaryOperator::Plus,
+            "-" => BinaryOperator::Minus,
+            "*" => BinaryOperator::Multiply,
+            "/" => BinaryOperator::Divide,
+            "%" => BinaryOperator::Modulo,
+            "~" => BinaryOperator::BitwiseXor,
+
+            _ => panic!("Unsupported operator: {}", str_operator),
+        };
+
+        // match operator {
+        //     BinaryOperator::Eq => {
+        //         let left = Expr::BinaryOp(
+        //             operator,
+        //             Box::new(Expr::Identifier(filter[0].to_string())),
+        //             Box::new(Expr::Identifier(filter[2].to_string())),
+        //         );
+        //         let right = Expr::Identifier(filter[4].to_string());
+        //         Ok(Some(Expr::BinaryOp(
+        //             operator,
+        //             Box::new(left),
+        //             Box::new(right),
+        //         )))
+        //     }
+        //     _ => Err(format!("Unsupported operator: {}", str_operator)),
+        // }
+
+        // Ok(Some(filter))
+
+        let expr = Expr::BinaryOp {
+            op: operator,
+            left: Box::new(Expr::Value(ValueWithSpan {
+                value: Value::SingleQuotedString(filter[0].to_string()),
+                span: Span::empty(),
+            })),
+            right: Box::new(Expr::Value(ValueWithSpan {
+                value: Value::SingleQuotedString(filter[2].to_string()),
+                span: Span::empty(),
+            })),
+        };
+
+        Ok(expr)
+    }
+}
+
+impl FromStr for Value {
+    fn from_str(value: &str) -> Result<Self, String> {
+        if value.starts_with("'") && value.ends_with("'") {
+            Ok(Value::SingleQuotedString(
+                value[1..value.len() - 1].to_string(),
+            ))
+        } else {
+            Err(format!("Unsupported value: {}", value))
+        }
+    }
+}
+
+impl FromStr for ObjectName {
+    fn from_str(name: &str) -> Result<Self, String> {
+        Ok(ObjectName::from(vec![Ident {
+            value: name.to_string(),
+            quote_style: None,
+            span: Span::empty(),
+        }]))
+    }
+}
+
+impl FromStr for Ident {
+    fn from_str(name: &str) -> Result<Self, String> {
+        Ok(Ident {
+            value: name.to_string(),
+            quote_style: None,
+            span: Span::empty(),
+        })
+    }
+}
 pub fn test() {
     println!();
 }

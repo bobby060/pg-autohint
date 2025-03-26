@@ -1,7 +1,7 @@
 /// Represents a Postgres plan
 /// Deserializes a Postgres plan from a JSON string
 use serde::*;
-
+use sqlparser::ast::SetOperator;
 /// Wrapper for parsing the whole plan json
 #[derive(Debug, Serialize, Deserialize)]
 struct PlanWrapper {
@@ -13,59 +13,281 @@ struct PlanWrapper {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "Node Type")]
 pub enum PlanNode {
-    Aggregate {
-        #[serde(rename = "Strategy")]
-        strategy: String,
-        #[serde(rename = "Partial Mode")]
-        partial_mode: String,
-        #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>,
-        #[serde(rename = "Output")]
-        output: Vec<String>,
-    },
-    Gather {
-        #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>,
-        #[serde(rename = "Output")]
-        output: Vec<String>,
-    },
+    Aggregate(Aggregate),
+    // scans
     #[serde(rename = "Seq Scan")]
-    SeqScan {
-        #[serde(rename = "Parent Relationship")]
-        parent_relationship: String,
-        #[serde(rename = "Relation Name")]
-        relation_name: String,
-        #[serde(rename = "Alias")]
-        alias: String,
-        #[serde(rename = "Filter")]
-        filter: Option<String>,
-        #[serde(rename = "Output")]
-        output: Vec<String>,
-    },
+    SeqScan(SeqScan),
+    #[serde(rename = "Index Scan")]
+    IndexScan(IndexScan),
+    // joins
+    Hash(Hash),
     #[serde(rename = "Hash Join")]
-    HashJoin {
-        #[serde(rename = "Parent Relationship")]
-        parent_relationship: String,
-        #[serde(rename = "Join Type")]
-        join_type: String,
-        #[serde(rename = "Inner Unique")]
-        inner_unique: bool,
-        #[serde(rename = "Hash Cond")]
-        hash_cond: String,
-        #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>,
-        #[serde(rename = "Output")]
-        output: Vec<String>,
-    },
-    #[serde(rename = "Hash")]
-    Hash {
-        #[serde(rename = "Parent Relationship")]
-        parent_relationship: String,
-        #[serde(rename = "Plans")]
-        children: Option<Vec<PlanNode>>,
-        #[serde(rename = "Output")]
-        output: Vec<String>,
-    },
+    HashJoin(HashJoin),
+    #[serde(rename = "Merge Join")]
+    MergeJoin(MergeJoin),
+    // limit, unique, sort
+    Limit(Limit),
+    Sort(Sort),
+    Unique(Unique), // Alias for distinct
+    Append(Append), // Alias for Union (we think?)
+    Gather(Gather),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Aggregate {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Strategy")]
+    pub strategy: String,
+    #[serde(rename = "Partial Mode")]
+    pub partial_mode: String,
+    #[serde(rename = "Subplan Name")]
+    pub subplan_name: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+// scans
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SeqScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub relation_name: String,
+    #[serde(rename = "Alias")]
+    pub alias: Option<String>,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IndexScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub relation_name: String,
+    #[serde(rename = "Index Name")]
+    pub index_name: String,
+    #[serde(rename = "Alias")]
+    pub alias: Option<String>,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Scan Direction")]
+    pub scan_direction: Option<String>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+// joins
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Hash {
+    // this one might be building hashtable
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct HashJoin {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Join Type")]
+    pub join_type: String,
+    #[serde(rename = "Inner Unique")]
+    pub inner_unique: bool,
+    #[serde(rename = "Hash Cond")]
+    pub hash_cond: String,
+    #[serde(rename = "Join Filter")]
+    pub join_filter: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MergeJoin {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Join Type")]
+    pub join_type: String,
+    #[serde(rename = "Inner Unique")]
+    pub inner_unique: bool,
+    #[serde(rename = "Merge Cond")]
+    pub merge_cond: String,
+    #[serde(rename = "Join Filter")]
+    pub join_filter: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+// limit, unique, sort
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Limit {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub limit_rows: i64, // NOTICE: this is actually the statistics, but seemed to be the only way to extract limit row count target
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Sort {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Sort Key")]
+    pub sort_keys: Vec<String>, // will be like [a, b DESC]
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+
+// Group of all scan operators
+#[derive(Debug, Serialize, Deserialize, Clone)]
+
+pub enum ScanNode {
+    SeqScan(SeqScan),
+    IndexScan(IndexScan),
+}
+
+impl ScanNode {
+    pub fn get_alias(&self) -> Option<String> {
+        match self {
+            ScanNode::SeqScan(seq_scan) => seq_scan.alias.clone(),
+            ScanNode::IndexScan(index_scan) => index_scan.alias.clone(),
+        }
+    }
+
+    pub fn get_filter(&self) -> Option<String> {
+        match self {
+            ScanNode::SeqScan(seq_scan) => seq_scan.filter.clone(),
+            ScanNode::IndexScan(index_scan) => index_scan.filter.clone(),
+        }
+    }
+
+    pub fn get_relation_name(&self) -> String {
+        match self {
+            ScanNode::SeqScan(seq_scan) => seq_scan.relation_name.clone(),
+            ScanNode::IndexScan(index_scan) => index_scan.relation_name.clone(),
+        }
+    }
+}
+
+// Group of all join operators
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum JoinNode {
+    HashJoin(HashJoin),
+    MergeJoin(MergeJoin),
+    // NestedLoopJoin(NestedLoopJoin),
+}
+
+impl JoinNode {
+    pub fn get_children(&self) -> Option<Vec<PlanNode>> {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.children.clone(),
+            JoinNode::MergeJoin(merge_join) => merge_join.children.clone(),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+        }
+    }
+
+    pub fn get_join_type(&self) -> String {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.join_type.clone(),
+            JoinNode::MergeJoin(merge_join) => merge_join.join_type.clone(),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.join_type.clone(),
+        }
+    }
+
+    pub fn get_join_filter(&self) -> Option<String> {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.join_filter.clone(),
+            JoinNode::MergeJoin(merge_join) => merge_join.join_filter.clone(),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => None,
+        }
+    }
+
+    pub fn get_inner_unique(&self) -> bool {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.inner_unique,
+            JoinNode::MergeJoin(merge_join) => merge_join.inner_unique,
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.inner_unique,
+        }
+    }
+
+    pub fn get_condition(&self) -> String {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.hash_cond.clone(),
+            JoinNode::MergeJoin(merge_join) => merge_join.merge_cond.clone(),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.hash_cond.clone(),
+        }
+    }
+}
+
+// Group of all set operators
+#[derive(Debug, Serialize, Deserialize, Clone)]
+
+pub enum SetNode {
+    Append(Append),
+    Unique(Unique),
+}
+
+impl SetNode {
+    pub fn get_children(&self) -> Option<Vec<PlanNode>> {
+        match self {
+            SetNode::Append(append) => append.children.clone(),
+            SetNode::Unique(unique) => unique.children.clone(),
+        }
+    }
+
+    pub fn set_children(&mut self, children: Vec<PlanNode>) {
+        match self {
+            SetNode::Append(append) => append.children = Some(children),
+            SetNode::Unique(unique) => unique.children = Some(children),
+        }
+    }
+
+    pub fn get_operator(&self) -> SetOperator {
+        match self {
+            SetNode::Append(_) => SetOperator::Union,
+            SetNode::Unique(_) => SetOperator::Intersect,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+
+pub struct Unique {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
+}
+// "useless" nodes
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Append {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Subplans Removed")]
+    pub subplans_removed: i64,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Gather {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    output: Vec<String>,
 }
 
 /// convert postgres plan json string to a tree of PlanNode's
