@@ -4,10 +4,7 @@ use crate::postgres2plan::*;
 use sqlparser::ast::helpers::attached_token::AttachedToken;
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
-use sqlparser::{
-    ast::{self, *},
-    parser,
-};
+use sqlparser::{ast::*, parser};
 /// Given a Postgres plan, convert it to a datafusion AST
 ///
 ///
@@ -60,14 +57,31 @@ impl Visit for PlanNode {
             PlanNode::Unique(unique) => SetNode::Unique(unique).visit_plan_node(),
             PlanNode::Append(append) => SetNode::Append(append).visit_plan_node(),
             PlanNode::Gather(gather) => gather.visit_plan_node(),
-            _ => Err("Not implemented".to_string()),
+            PlanNode::Aggregate(agg) => agg.visit_plan_node(),
+            _ => Err("Node not implemented".to_string()),
         }
     }
 }
 
 impl Visit for Aggregate {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        // Ignore partial aggregates, since they are duplicates of the final aggregates
+
+        if self.partial_mode == "Partial" {
+            return Ok(self.children.unwrap()[0].to_owned().visit_plan_node()?);
+        }
+        let children = self.children.unwrap()[0].to_owned().visit_plan_node()?;
+
+        match children {
+            SetExpr::Select(select) => {
+                let mut select = select.to_owned();
+                select.projection = vec![SelectItem::UnnamedExpr(
+                    Expr::from_str(self.output.unwrap()[0].as_str()).unwrap(),
+                )];
+                Ok(SetExpr::Select(select))
+            }
+            _ => Err("Expected a select statement".to_string()),
+        }
     }
 }
 
@@ -96,39 +110,7 @@ impl Visit for ScanNode {
         }
 
         // parse table
-        let table = TableWithJoins {
-            joins: vec![],
-            relation: TableFactor::Table {
-                name: ObjectName::from_str(&self.get_relation_name())?,
-                alias: match self.get_alias() {
-                    Some(alias) => {
-                        let alias_str = alias.as_str();
-                        let ident = match parse_expr(alias_str) {
-                            Ok(Expr::Identifier(ident)) => ident,
-                            _ => {
-                                return Err(format!(
-                                    "Failed to parse alias: expected an identifier, but got '{}'",
-                                    alias_str
-                                ))
-                            }
-                        };
-                        Some(TableAlias {
-                            name: ident,
-                            columns: vec![],
-                        })
-                    }
-                    None => None,
-                },
-                args: None,
-                with_hints: vec![],
-                version: None,
-                with_ordinality: false,
-                partitions: vec![],
-                json_path: None,
-                sample: None,
-                index_hints: vec![],
-            },
-        };
+        let table = build_base_table(&self.get_relation_name(), self.get_alias())?;
         from.push(table);
 
         // build ast struct
@@ -263,6 +245,41 @@ impl Visit for Gather {
             None => Err("Gather has no children, expected 1".to_string()),
         }
     }
+}
+
+fn build_base_table(relation_name: &str, alias: Option<String>) -> Result<TableWithJoins, String> {
+    Ok(TableWithJoins {
+        joins: vec![],
+        relation: TableFactor::Table {
+            name: ObjectName::from_str(relation_name)?,
+            alias: match alias {
+                Some(alias) => {
+                    let ident = match parse_expr(alias.as_str()) {
+                        Ok(Expr::Identifier(ident)) => ident,
+                        _ => {
+                            return Err(format!(
+                                "Failed to parse alias: expected an identifier, but got '{}'",
+                                alias
+                            ))
+                        }
+                    };
+                    Some(TableAlias {
+                        name: ident,
+                        columns: vec![],
+                    })
+                }
+                None => None,
+            },
+            args: None,
+            with_hints: vec![],
+            version: None,
+            with_ordinality: false,
+            partitions: vec![],
+            json_path: None,
+            sample: None,
+            index_hints: vec![],
+        },
+    })
 }
 
 /// this test module is used to display reference asts

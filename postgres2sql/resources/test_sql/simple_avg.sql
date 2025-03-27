@@ -1,0 +1,1 @@
+select avg(num_votes) from title_ratings;

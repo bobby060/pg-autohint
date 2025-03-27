@@ -68,6 +68,12 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
                     actual_row_str.push(value1.unwrap_or_else(|| false).to_string());
                     expected_row_str.push(value2.unwrap_or_else(|| false).to_string());
                 }
+                &Type::NUMERIC => {
+                    let value1: Option<f64> = result_row.try_get(i).ok();
+                    let value2: Option<f64> = expected_row.try_get(i).ok();
+                    actual_row_str.push(value1.unwrap_or_else(|| 0.0).to_string());
+                    expected_row_str.push(value2.unwrap_or_else(|| 0.0).to_string());
+                }
                 _ => {
                     panic!("Unsupported type: {:?}", t);
                 }
