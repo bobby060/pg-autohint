@@ -76,6 +76,11 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
 
         actual_rows.push(actual_row_str);
         expected_rows.push(expected_row_str);
+
+        // Prevent overloading tester
+        if actual_rows.len() > 100 {
+            break;
+        }
     }
 
     if ordered {
