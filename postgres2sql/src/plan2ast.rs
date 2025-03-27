@@ -14,21 +14,7 @@ use sqlparser::{
 ///
 ///
 pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
-    todo!("implement plan2ast logic");
-    // 1. Build body (SetExpr)
-    // if let PlanNode::Limit {
-    //     limit_rows,
-    //     children,
-    //     ..
-    // } = plan
-    // {
-    //     let limit = LimitClause::from_plan_node(plan)?;
-    //     let plan = children.unwrap()[0];
-    // }
-
-    // 1.1 If select:
-    // Call build_select
-    let _expr = plan.visit_plan_node()?;
+    let expr = plan.visit_plan_node()?;
 
     // 1.2 If set, build of children recursively
 
@@ -37,20 +23,24 @@ pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     // 3. Build limit
 
     // Placeholder for the AST
-    let ast = Query {
-        with: None,
-        body: Box::new(_expr),
-        order_by: None,
-        limit: None,
-        limit_by: Vec::new(),
-        offset: None,
-        fetch: None,
-        locks: Vec::new(),
-        for_clause: None,
-        settings: None,
-        format_clause: None,
-    };
-    Ok(ast)
+    if let SetExpr::Query(query) = expr {
+        Ok(*query)
+    } else {
+        let query = Query {
+            with: None,
+            body: Box::new(expr),
+            order_by: None,
+            limit: None,
+            limit_by: vec![],
+            offset: None,
+            fetch: None,
+            locks: vec![],
+            for_clause: None,
+            settings: None,
+            format_clause: None,
+        };
+        Ok(query)
+    }
 }
 
 trait Visit {
@@ -170,6 +160,30 @@ impl Visit for ScanNode {
     }
 }
 
+impl Visit for Limit {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        let limit = Expr::from_str(self.limit_rows.to_string().as_str())?;
+
+        let child_expr = self.children.unwrap()[0].clone().visit_plan_node()?;
+
+        let query = Query {
+            with: None,
+            body: Box::new(child_expr),
+            order_by: None,
+            limit: Some(limit),
+            limit_by: vec![],
+            offset: None,
+            fetch: None,
+            locks: vec![],
+            for_clause: None,
+            settings: None,
+            format_clause: None,
+        };
+
+        Ok(SetExpr::Query(Box::new(query)))
+    }
+}
+
 impl Visit for IndexScan {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         Err("Not implemented".to_string())
@@ -195,12 +209,6 @@ impl Visit for HashJoin {
 }
 
 impl Visit for MergeJoin {
-    fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
-    }
-}
-
-impl Visit for Limit {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         Err("Not implemented".to_string())
     }

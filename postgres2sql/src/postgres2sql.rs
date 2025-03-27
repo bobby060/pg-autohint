@@ -34,7 +34,12 @@ mod test {
         let original_sql = std::fs::read_to_string(Path::new(sql_path.as_str()))
             .expect("Failed to read original sql file");
 
-        correctness_test("imdb", &original_sql, &new_sql);
+        correctness_test(
+            "imdb",
+            &original_sql,
+            &new_sql,
+            new_sql.contains("ORDER BY"),
+        );
     }
 
     // Runs tests for each plan in resources/test_json. Each json also needs to have a corresponding sql file in resources/test_sql.
