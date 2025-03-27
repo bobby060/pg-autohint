@@ -31,6 +31,8 @@ pub enum PlanNode {
     Unique(Unique), // Alias for distinct
     Append(Append), // Alias for Union (we think?)
     Gather(Gather),
+    #[serde(rename = "Gather Merge")]
+    GatherMerge(GatherMerge),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -289,6 +291,17 @@ pub struct Append {
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Gather {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+
+pub struct GatherMerge {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]

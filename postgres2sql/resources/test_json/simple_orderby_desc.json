@@ -1,0 +1,82 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 320765.31,
+            "Total Cost": 320766.48,
+            "Plan Rows": 10,
+            "Plan Width": 22,
+            "Output": [
+                "primarytitle",
+                "startyear"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Gather Merge",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 320765.31,
+                    "Total Cost": 1443730.05,
+                    "Plan Rows": 9624740,
+                    "Plan Width": 22,
+                    "Output": [
+                        "primarytitle",
+                        "startyear"
+                    ],
+                    "Workers Planned": 2,
+                    "Plans": [
+                        {
+                            "Node Type": "Sort",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Startup Cost": 319765.29,
+                            "Total Cost": 331796.21,
+                            "Plan Rows": 4812370,
+                            "Plan Width": 22,
+                            "Output": [
+                                "primarytitle",
+                                "startyear"
+                            ],
+                            "Sort Key": [
+                                "title_basics.startyear",
+                                "title_basics.primarytitle DESC"
+                            ],
+                            "Plans": [
+                                {
+                                    "Node Type": "Seq Scan",
+                                    "Parent Relationship": "Outer",
+                                    "Parallel Aware": true,
+                                    "Async Capable": false,
+                                    "Relation Name": "title_basics",
+                                    "Schema": "public",
+                                    "Alias": "title_basics",
+                                    "Startup Cost": 0.00,
+                                    "Total Cost": 215771.70,
+                                    "Plan Rows": 4812370,
+                                    "Plan Width": 22,
+                                    "Output": [
+                                        "primarytitle",
+                                        "startyear"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "JIT": {
+            "Functions": 3,
+            "Options": {
+                "Inlining": false,
+                "Optimization": false,
+                "Expressions": true,
+                "Deforming": true
+            }
+        }
+    }
+]

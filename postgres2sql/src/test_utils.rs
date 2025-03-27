@@ -28,8 +28,6 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
         for i in 0..result_row.len() {
             let t: &Type = result_row.columns()[i].type_();
 
-            // TODO: Currently only works for queries that are ordered
-
             // All types in our test dataset. Would need to add more to support all postgres types.
             match t {
                 &Type::INT2 => {

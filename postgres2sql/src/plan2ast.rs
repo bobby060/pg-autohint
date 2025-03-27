@@ -58,7 +58,8 @@ impl Visit for PlanNode {
             PlanNode::Append(append) => SetNode::Append(append).visit_plan_node(),
             PlanNode::Gather(gather) => gather.visit_plan_node(),
             PlanNode::Aggregate(agg) => agg.visit_plan_node(),
-            _ => Err("Node not implemented".to_string()),
+            PlanNode::GatherMerge(gather_merge) => gather_merge.visit_plan_node(),
+            // _ => Err("Node not implemented".to_string()),
         }
     }
 }
@@ -91,17 +92,6 @@ impl Visit for ScanNode {
         let mut from: Vec<TableWithJoins> = vec![];
         // predicates
         let mut selection = None;
-        // projections
-        let mut projection: Vec<SelectItem> = vec![];
-
-        // parse projections
-        if let Some(output) = self.get_output() {
-            for x in output.iter() {
-                let expr = parse_expr(x).map_err(|e| e.to_string())?;
-                let select_item = SelectItem::UnnamedExpr(expr);
-                projection.push(select_item);
-            }
-        }
 
         // parse predicate
         if let Some(filter) = self.get_filter() {
@@ -117,7 +107,7 @@ impl Visit for ScanNode {
         let select = Select {
             select_token: AttachedToken::empty(),
             distinct: None,
-            projection: projection,
+            projection: parse_projections(self.get_output().unwrap())?,
             into: None,
             from: from,
             group_by: GroupByExpr::Expressions(vec![], vec![]),
@@ -148,6 +138,12 @@ impl Visit for Limit {
 
         let child_expr = self.children.unwrap()[0].clone().visit_plan_node()?;
 
+        if let SetExpr::Query(query) = child_expr {
+            let mut query = query.to_owned();
+            query.limit = Some(limit);
+            return Ok(SetExpr::Query(query));
+        }
+
         let query = Query {
             with: None,
             body: Box::new(child_expr),
@@ -163,12 +159,6 @@ impl Visit for Limit {
         };
 
         Ok(SetExpr::Query(Box::new(query)))
-    }
-}
-
-impl Visit for IndexScan {
-    fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
     }
 }
 
@@ -196,9 +186,52 @@ impl Visit for MergeJoin {
     }
 }
 
+// NOTE: the Output field for a sorted plan includes the sort key, even if not part of original query output
 impl Visit for Sort {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        let mut order_by_items = vec![];
+        for key in self.sort_keys.iter() {
+            let expr = parse_expr(key).unwrap();
+            order_by_items.push(OrderByExpr {
+                expr: expr,
+                options: OrderByOptions {
+                    asc: match key.ends_with("DESC") {
+                        true => Some(false),
+                        false => Some(true),
+                    },
+                    nulls_first: None,
+                },
+                with_fill: None,
+            });
+        }
+        let order_by = OrderBy {
+            kind: OrderByKind::Expressions(order_by_items),
+            interpolate: None,
+        };
+
+        let child_expr = self.children.unwrap()[0].clone().visit_plan_node()?;
+
+        if let SetExpr::Query(query) = child_expr {
+            let mut query = query.to_owned();
+            query.order_by = Some(order_by);
+            return Ok(SetExpr::Query(query));
+        }
+
+        let query = Query {
+            with: None,
+            body: Box::new(child_expr),
+            order_by: Some(order_by),
+            limit: None,
+            limit_by: vec![],
+            offset: None,
+            fetch: None,
+            locks: vec![],
+            for_clause: None,
+            settings: None,
+            format_clause: None,
+        };
+
+        Ok(SetExpr::Query(Box::new(query)))
     }
 }
 
@@ -247,6 +280,37 @@ impl Visit for Gather {
     }
 }
 
+impl Visit for GatherMerge {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        match self.children {
+            Some(children) => Ok(children
+                .get(0)
+                .ok_or_else(|| "GatherMerge has no children, expected 1".to_string())?
+                .clone()
+                .visit_plan_node()?),
+            None => Err("GatherMerge has no children, expected 1".to_string()),
+        }
+    }
+}
+
+fn parse_projections(output: Vec<String>) -> Result<Vec<SelectItem>, String> {
+    let mut projection = vec![];
+    for x in output.iter() {
+        let expr = parse_expr(x).map_err(|e| e.to_string())?;
+        let select_item = SelectItem::UnnamedExpr(expr);
+        projection.push(select_item);
+    }
+    Ok(projection)
+}
+
+/// Build a base table with no joins
+///
+/// # Arguments
+///
+/// * `relation_name`: The name of the relation to build the table from
+/// * `alias`: The alias of the table
+///
+/// # Returns a TableWithJoins struct
 fn build_base_table(relation_name: &str, alias: Option<String>) -> Result<TableWithJoins, String> {
     Ok(TableWithJoins {
         joins: vec![],
