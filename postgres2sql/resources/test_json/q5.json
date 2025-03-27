@@ -10,6 +10,7 @@
             "Total Cost": 560132.55,
             "Plan Rows": 3839424,
             "Plan Width": 20,
+            "Output": ["title_basics.primarytitle"],
             "Filter": "((runtimeminutes)::numeric > $1)",
             "Plans": [
                 {
@@ -24,6 +25,7 @@
                     "Total Cost": 220094.46,
                     "Plan Rows": 1,
                     "Plan Width": 32,
+                    "Output": ["avg(title_basics_1.runtimeminutes)"],
                     "Plans": [
                         {
                             "Node Type": "Gather",
@@ -34,6 +36,7 @@
                             "Total Cost": 220094.44,
                             "Plan Rows": 2,
                             "Plan Width": 32,
+                            "Output": ["(PARTIAL avg(title_basics_1.runtimeminutes))"],
                             "Workers Planned": 2,
                             "Single Copy": false,
                             "Plans": [
@@ -48,6 +51,7 @@
                                     "Total Cost": 219094.24,
                                     "Plan Rows": 1,
                                     "Plan Width": 32,
+                                    "Output": ["PARTIAL avg(title_basics_1.runtimeminutes)"],
                                     "Plans": [
                                         {
                                             "Node Type": "Seq Scan",
@@ -60,6 +64,7 @@
                                             "Total Cost": 215256.80,
                                             "Plan Rows": 1534970,
                                             "Plan Width": 4,
+                                            "Output": ["title_basics_1.tconst", "title_basics_1.titletype", "title_basics_1.primarytitle", "title_basics_1.originaltitle", "title_basics_1.isadult", "title_basics_1.startyear", "title_basics_1.endyear", "title_basics_1.runtimeminutes", "title_basics_1.genres"],
                                             "Filter": "(runtimeminutes IS NOT NULL)"
                                         }
                                     ]

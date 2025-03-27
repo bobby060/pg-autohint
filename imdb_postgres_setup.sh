@@ -70,6 +70,14 @@ psql -d imdb -c "COPY title_crew FROM '$(pwd)/imdb-datasets/title.crew.tsv' DELI
 psql -d imdb -c "COPY title_episode FROM '$(pwd)/imdb-datasets/title.episode.tsv' DELIMITER E'\t' QUOTE E'\b' NULL '\N' CSV HEADER"
 psql -d imdb -c "COPY title_principals FROM '$(pwd)/imdb-datasets/title.principals.tsv' DELIMITER E'\t' QUOTE E'\b' NULL '\N' CSV HEADER"
 
+
+# Indexes on the primary keys of title_basics, title_ratings, title_crew, name_basics
+printf "Creating indexes \n"
+psql -d imdb -c "CREATE INDEX title_basics_pkey ON title_basics (tconst);"
+psql -d imdb -c "CREATE INDEX title_ratings_pkey ON title_ratings (tconst);"
+psql -d imdb -c "CREATE INDEX title_crew_pkey ON title_crew (tconst);"
+psql -d imdb -c "CREATE INDEX name_basics_pkey ON name_basics (nconst);"
+
 printf "Done! \n"
 
 printf "Script done at %s. \n" "$(date)"

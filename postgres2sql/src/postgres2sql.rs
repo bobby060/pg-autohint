@@ -28,6 +28,8 @@ mod test {
         let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
         let new_sql = postgres2sql(input).expect("Failed to parse input");
 
+        println!("{}", new_sql);
+
         let sql_path = input_path.to_str().unwrap().replace("json", "sql");
         let original_sql = std::fs::read_to_string(Path::new(sql_path.as_str()))
             .expect("Failed to read original sql file");

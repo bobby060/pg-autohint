@@ -9,6 +9,7 @@
             "Total Cost": 10394924.53,
             "Plan Rows": 91487016,
             "Plan Width": 34,
+            "Output": ["title_basics.primarytitle", "name_basics.primaryname"],
             "Inner Unique": false,
             "Hash Cond": "(title_principals.tconst = title_basics.tconst)",
             "Plans": [
@@ -22,6 +23,7 @@
                     "Total Cost": 6223014.45,
                     "Plan Rows": 91487016,
                     "Plan Width": 24,
+                    "Output": ["title_principals.tconst", "name_basics.primaryname"],
                     "Inner Unique": false,
                     "Hash Cond": "(title_principals.nconst = (name_basics.nconst)::text)",
                     "Plans": [
@@ -35,7 +37,8 @@
                             "Startup Cost": 0.00,
                             "Total Cost": 1767166.16,
                             "Plan Rows": 91487016,
-                            "Plan Width": 20
+                            "Plan Width": 20,
+                            "Output": ["title_principals.tconst", "title_principals.nconst"]
                         },
                         {
                             "Node Type": "Hash",
@@ -46,6 +49,7 @@
                             "Total Cost": 293738.58,
                             "Plan Rows": 14261058,
                             "Plan Width": 24,
+                            "Output": ["name_basics.primaryname", "name_basics.nconst"],
                             "Plans": [
                                 {
                                     "Node Type": "Seq Scan",
@@ -57,7 +61,8 @@
                                     "Startup Cost": 0.00,
                                     "Total Cost": 293738.58,
                                     "Plan Rows": 14261058,
-                                    "Plan Width": 24
+                                    "Plan Width": 24,
+                                    "Output": ["name_basics.primaryname", "name_basics.nconst"]
                                 }
                             ]
                         }
@@ -72,6 +77,7 @@
                     "Total Cost": 282446.73,
                     "Plan Rows": 11518273,
                     "Plan Width": 30,
+                    "Output": ["title_basics.primarytitle", "title_basics.tconst"],
                     "Plans": [
                         {
                             "Node Type": "Seq Scan",
@@ -83,7 +89,8 @@
                             "Startup Cost": 0.00,
                             "Total Cost": 282446.73,
                             "Plan Rows": 11518273,
-                            "Plan Width": 30
+                            "Plan Width": 30,
+                            "Output": ["title_basics.primarytitle", "title_basics.tconst"]
                         }
                     ]
                 }

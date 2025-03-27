@@ -11,6 +11,7 @@ use sqlparser::parser::Parser;
 ///
 ///
 pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
+    todo!("implement plan2ast logic");
     // 1. Build body (SetExpr)
     // if let PlanNode::Limit {
     //     limit_rows,
@@ -35,29 +36,7 @@ pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     // Placeholder for the AST
     let ast = Query {
         with: None,
-        body: Box::new(SetExpr::Select(Box::new(Select {
-            select_token: AttachedToken::empty(),
-            distinct: None,
-            projection: vec![],
-            into: None,
-            from: vec![],
-            group_by: GroupByExpr::All(vec![]),
-            top: None,
-            top_before_distinct: false,
-            lateral_views: vec![],
-            prewhere: None,
-            selection: None,
-            cluster_by: vec![],
-            connect_by: None,
-            distribute_by: vec![],
-            sort_by: vec![],
-            having: None,
-            named_window: vec![],
-            qualify: None,
-            window_before_qualify: false,
-            flavor: SelectFlavor::Standard,
-            value_table_mode: None,
-        }))),
+        body: Box::new(_expr),
         order_by: None,
         limit: None,
         limit_by: Vec::new(),
@@ -77,21 +56,16 @@ trait Visit {
 
 impl Visit for PlanNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        // Conceptuallly, will need to perform the following:
-        // 1. Extract the final projection
-        // 2. Create an expression tree for all filters in the scans
-        // 3. Add each table to the from clause, including joins
-
         match self {
-            PlanNode::SeqScan(scan) => scan.visit_plan_node(),
-            PlanNode::IndexScan(scan) => scan.visit_plan_node(),
+            PlanNode::SeqScan(scan) => ScanNode::SeqScan(scan).visit_plan_node(),
+            PlanNode::IndexScan(scan) => ScanNode::IndexScan(scan).visit_plan_node(),
             PlanNode::Hash(hash) => hash.visit_plan_node(),
             PlanNode::HashJoin(join) => join.visit_plan_node(),
             PlanNode::MergeJoin(join) => join.visit_plan_node(),
             PlanNode::Limit(limit) => limit.visit_plan_node(),
             PlanNode::Sort(sort) => sort.visit_plan_node(),
-            PlanNode::Unique(unique) => unique.visit_plan_node(),
-            PlanNode::Append(append) => append.visit_plan_node(),
+            PlanNode::Unique(unique) => SetNode::Unique(unique).visit_plan_node(),
+            PlanNode::Append(append) => SetNode::Append(append).visit_plan_node(),
             PlanNode::Gather(gather) => gather.visit_plan_node(),
             _ => Err("Not implemented".to_string()),
         }
@@ -104,30 +78,53 @@ impl Visit for Aggregate {
     }
 }
 
-impl Visit for SeqScan {
+impl Visit for ScanNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        // TODO: FIX PROJECTION!!!
-        let projection: Vec<SelectItem> = vec![];
+        // tables
         let mut from: Vec<TableWithJoins> = vec![];
+        // predicates
         let mut selection = None;
-        let group_by: GroupByExpr = GroupByExpr::Expressions(vec![], vec![]);
+        // projections
+        let mut projection: Vec<SelectItem> = vec![];
 
-        if let Some(filter) = self.filter {
+        // parse projections 
+        if let Some(output) = self.get_output() {
+            for x in output.iter() {
+                let expr = parse_expr(x).map_err(|e| e.to_string())?;
+                let select_item = SelectItem::UnnamedExpr(expr);
+                projection.push(select_item);
+            }
+        }
+
+        // parse predicate
+        if let Some(filter) = self.get_filter() {
             let filter: Expr = FromStr::from_str(&filter)?;
             selection = Some(filter);
         }
 
+        // parse table
         let table = TableWithJoins {
             joins: vec![],
             relation: TableFactor::Table {
-                name: ObjectName::from_str(&self.relation_name)?,
-                alias: if let Some(alias) = self.alias {
-                    Some(TableAlias {
-                        name: Ident::from_str(&alias)?,
-                        columns: vec![], // TODO: add columns
-                    })
-                } else {
-                    None
+                name: ObjectName::from_str(&self.get_relation_name())?,
+                alias: match self.get_alias() {
+                    Some(alias) => {
+                        let alias_str = alias.as_str();
+                        let ident = match parse_expr(alias_str) {
+                            Ok(Expr::Identifier(ident)) => ident,
+                            _ => {
+                                return Err(format!(
+                                    "Failed to parse alias: expected an identifier, but got '{}'",
+                                    alias_str
+                                ))
+                            }
+                        };
+                        Some(TableAlias {
+                            name: ident,
+                            columns: vec![],
+                        })
+                    },
+                    None => None
                 },
                 args: None,
                 with_hints: vec![],
@@ -139,17 +136,16 @@ impl Visit for SeqScan {
                 index_hints: vec![],
             },
         };
-
         from.push(table);
 
-        // TODO: FIX PROJECTION!!!
+        // build ast struct
         let select = Select {
             select_token: AttachedToken::empty(),
             distinct: None,
             projection: projection,
             into: None,
             from: from,
-            group_by: group_by,
+            group_by: GroupByExpr::Expressions(vec![], vec![]),
             top: None,
             top_before_distinct: false,
             lateral_views: vec![],
@@ -185,6 +181,12 @@ impl Visit for Hash {
 
 impl Visit for HashJoin {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
+        let mut children_exprs = vec![];
+        for child in self.children.unwrap() {
+            let child_expr = child.visit_plan_node()?;
+            children_exprs.push(child_expr);
+        }
+
         Err("Not implemented".to_string())
     }
 }
@@ -207,28 +209,57 @@ impl Visit for Sort {
     }
 }
 
-impl Visit for Unique {
+impl Visit for SetNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
-    }
-}
 
-impl Visit for Append {
-    fn visit_plan_node(self) -> Result<SetExpr, String> {
         Err("Not implemented".to_string())
+
+        // let children = self.get_children();
+
+        // let mut append_with_less_children = self.clone();
+        // if let Some(children) = children {
+        //     let set_expr = SetExpr::SetOperation {
+        //         op: self.get_operator(),
+
+        //         // TODO: Do we need to have different quantifiers for Union/Intersect/Except?
+        //         set_quantifier: SetQuantifier::Distinct,
+        //         left: Box::new(children[0].clone().visit_plan_node()?),
+        //         // TODO: add test cases that have more than 2 children for Union/Intersect
+        //         // TODO: add test cases for other set operations (Except)
+        //         // Make the right, but if more than 2 children, make the right the append with the rest of the children
+        //         right: Box::new(if children.len() == 2 {
+        //             children[1].clone().visit_plan_node()?
+        //         } else {
+        //             append_with_less_children.set_children(children[1..].to_vec());
+        //             append_with_less_children.visit_plan_node()?
+        //         }),
+        //     };
+
+        //     Ok(set_expr)
+        // } else {
+        //     Err("No children".to_string())
+        // }
     }
 }
 
 impl Visit for Gather {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        match self.children {
+            Some(children) => Ok(children.get(0)
+                .ok_or_else(|| "Gather has no children, expected 1".to_string())?
+                .clone()
+                .visit_plan_node()?),
+            None => Err("Gather has no children, expected 1".to_string()),
+        }
     }
 }
 
+/// this test module is used to display reference asts
+/// only used during development
 #[cfg(test)]
-mod test_visit_nodes {
+mod show_ref_ast {
     use super::*;
-
+    // helper func to display reference ast
     fn ref_helper(sql: &str) {
         let dialect = GenericDialect {};
         match Parser::parse_sql(&dialect, sql) {
@@ -247,24 +278,83 @@ mod test_visit_nodes {
     }
 
     #[test]
+    #[ignore]
+    // this function is meant for you to see what the ast is supposed to look like conveniently
     fn show_ref_seq_scan() {
-        ref_helper("SELECT * FROM title_basics WHERE runtimeminutes < 25");
+        ref_helper("SELECT title_basics.tconst, titletype, primarytitle FROM title_basics WHERE (runtimeminutes < 25)");
     }
 
     #[test]
+    #[ignore]
+    fn show_ref_seq_scan_alias() {
+        ref_helper("SELECT t1.tconst a, titlebasics.titletype b, primarytitle c FROM title_basics t1 WHERE (runtimeminutes < 25)");
+        todo!("aliases are not handled now, need to see when are aliases outputed by postgres plan!");
+    }
+}
+
+/// tests for impl Visit for PlanNodes
+#[cfg(test)]
+mod test_visit_nodes {
+    use super::*;
+
+    // test visit_plan_node for SeqScan with projection, predicate, table alias, compound column identifiers 
+    #[test]
     fn test_visit_seq_scan() {
-        let refsol = "SELECT * FROM title_basics WHERE runtimeminutes < 25";
+        // Guide to test operator's visit:
+        // first define the test query, notice some expressions should be within parenthesis if the PlanNode tree has it,
+        // an expression with parenthesis are wrapped with Expr::Nested in ast.
+        // (p.s. there seemed to be no case that the output columns has aliases, we can add them if needed)
+        let test_query = "SELECT title_basics.tconst, titletype, primarytitle FROM title_basics AS t1 WHERE (runtimeminutes < 25)";
+        let test_ast = parse_query(test_query).unwrap().body;
+        // constuct the PlanNode as if it was created via postgres2plan, also notice the parenthesis
+        let scan_node = ScanNode::SeqScan(SeqScan{
+            parent_relationship: Some("Outer".to_string()),
+            relation_name: "title_basics".to_string(),
+            alias: Some("t1".to_string()),
+            filter: Some("(runtimeminutes < 25)".to_string()),
+            output: Some(vec![
+                "title_basics.tconst".to_string(),
+                "titletype".to_string(),
+                "primarytitle".to_string(),
+            ]), // notice that the postgres plan output never uses *, but list all cols
+        });
+        // call to your visit_plan_node here and compare against the test_ast
+        let result = scan_node.visit_plan_node();
+        let result = result.unwrap();
+        assert_eq!(
+            result, *test_ast,
+            "Mismatch: Parsed Result: {:#?}, Test AST: {:#?}", result, test_ast
+        );
+        // if the ast is identical, the output SQL query are semantically equivalent, 
+        // the only mismatches are minors like the converted will always have 
+        // 'AS' when specifying aliases, while what the user has written may not.
+    }
+    #[test]
+    // visit gather node should ignore it, returning the visit result of its only children
+    #[test]
+    fn test_visit_gather() {
+        let test_query = "SELECT tconst FROM title_basics WHERE (runtimeminutes < 25)";
+        let test_ast = parse_query(test_query).unwrap().body;
         let scan_node = SeqScan{
             parent_relationship: Some("Outer".to_string()),
             relation_name: "title_basics".to_string(),
             alias: None,
             filter: Some("(runtimeminutes < 25)".to_string()),
+            output: Some(vec![
+                "tconst".to_string(),
+            ]),
         };
-        let result = scan_node.visit_plan_node();
+        let gather_node = Gather {
+            children: Some(vec![PlanNode::SeqScan(scan_node)]),
+            parent_relationship: None,
+            output: None,
+        };
+        let result = gather_node.visit_plan_node();
         let result = result.unwrap();
-        println!("visit seq scan result:\n{:#?}", result);
-        println!("{}", result.to_string());
-        assert!(refsol == result.to_string());
+        assert_eq!(
+            result, *test_ast,
+            "Mismatch: Parsed Result: {:#?}, Test AST: {:#?}", result, test_ast
+        );
     }
 }
 
@@ -324,7 +414,7 @@ impl FromStr for Ident {
     }
 }
 
-/// function used for parsing a string expression into a sqlparser::ast::Expr
+/// helper function used for parsing a string expression into a sqlparser::ast::Expr
 fn parse_expr(expr: &str) -> Result<Expr, parser::ParserError> {
     let parser= Parser::new(&GenericDialect);
     let result = parser.try_with_sql(expr);
@@ -333,6 +423,17 @@ fn parse_expr(expr: &str) -> Result<Expr, parser::ParserError> {
     parser.parse_expr()
 }
 
+/// helper function used for parsing a SQL query string into a Box<sqlparser::ast::Query>
+fn parse_query(query: &str) -> Result<Box<Query>, parser::ParserError> {
+    let parser= Parser::new(&GenericDialect);
+    let result = parser.try_with_sql(query);
+    let mut parser = result.unwrap();
+    let _token = parser.token_at(0).clone();
+    parser.parse_query()
+}
+
+/// test module for impl FromStr trait for string expressions in PlanNodes
+/// TODO: most of the tests does not do assert! yet, they simply print the converted Expr!
 #[cfg(test)]
 mod test_from_str {
     use super::*;
