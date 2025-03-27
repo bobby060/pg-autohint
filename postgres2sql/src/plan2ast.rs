@@ -2,9 +2,12 @@ use std::vec;
 
 use crate::postgres2plan::*;
 use sqlparser::ast::helpers::attached_token::AttachedToken;
-use sqlparser::{ast::{self, *}, parser};
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
+use sqlparser::{
+    ast::{self, *},
+    parser,
+};
 /// Given a Postgres plan, convert it to a datafusion AST
 ///
 ///
@@ -87,7 +90,7 @@ impl Visit for ScanNode {
         // projections
         let mut projection: Vec<SelectItem> = vec![];
 
-        // parse projections 
+        // parse projections
         if let Some(output) = self.get_output() {
             for x in output.iter() {
                 let expr = parse_expr(x).map_err(|e| e.to_string())?;
@@ -123,8 +126,8 @@ impl Visit for ScanNode {
                             name: ident,
                             columns: vec![],
                         })
-                    },
-                    None => None
+                    }
+                    None => None,
                 },
                 args: None,
                 with_hints: vec![],
@@ -211,7 +214,6 @@ impl Visit for Sort {
 
 impl Visit for SetNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-
         Err("Not implemented".to_string())
 
         // let children = self.get_children();
@@ -245,7 +247,8 @@ impl Visit for SetNode {
 impl Visit for Gather {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         match self.children {
-            Some(children) => Ok(children.get(0)
+            Some(children) => Ok(children
+                .get(0)
                 .ok_or_else(|| "Gather has no children, expected 1".to_string())?
                 .clone()
                 .visit_plan_node()?),
@@ -272,7 +275,7 @@ mod show_ref_ast {
                 for stmt in ast {
                     println!("{}", stmt.to_string());
                 }
-            },
+            }
             Err(e) => println!("Error parsing SQL: {}", e),
         }
     }
@@ -288,7 +291,9 @@ mod show_ref_ast {
     #[ignore]
     fn show_ref_seq_scan_alias() {
         ref_helper("SELECT t1.tconst a, titlebasics.titletype b, primarytitle c FROM title_basics t1 WHERE (runtimeminutes < 25)");
-        todo!("aliases are not handled now, need to see when are aliases outputed by postgres plan!");
+        todo!(
+            "aliases are not handled now, need to see when are aliases outputed by postgres plan!"
+        );
     }
 }
 
@@ -297,7 +302,7 @@ mod show_ref_ast {
 mod test_visit_nodes {
     use super::*;
 
-    // test visit_plan_node for SeqScan with projection, predicate, table alias, compound column identifiers 
+    // test visit_plan_node for SeqScan with projection, predicate, table alias, compound column identifiers
     #[test]
     fn test_visit_seq_scan() {
         // Guide to test operator's visit:
@@ -307,7 +312,7 @@ mod test_visit_nodes {
         let test_query = "SELECT title_basics.tconst, titletype, primarytitle FROM title_basics AS t1 WHERE (runtimeminutes < 25)";
         let test_ast = parse_query(test_query).unwrap().body;
         // constuct the PlanNode as if it was created via postgres2plan, also notice the parenthesis
-        let scan_node = ScanNode::SeqScan(SeqScan{
+        let scan_node = ScanNode::SeqScan(SeqScan {
             parent_relationship: Some("Outer".to_string()),
             relation_name: "title_basics".to_string(),
             alias: Some("t1".to_string()),
@@ -323,26 +328,25 @@ mod test_visit_nodes {
         let result = result.unwrap();
         assert_eq!(
             result, *test_ast,
-            "Mismatch: Parsed Result: {:#?}, Test AST: {:#?}", result, test_ast
+            "Mismatch: Parsed Result: {:#?}, Test AST: {:#?}",
+            result, test_ast
         );
-        // if the ast is identical, the output SQL query are semantically equivalent, 
-        // the only mismatches are minors like the converted will always have 
+        // if the ast is identical, the output SQL query are semantically equivalent,
+        // the only mismatches are minors like the converted will always have
         // 'AS' when specifying aliases, while what the user has written may not.
     }
-    #[test]
+
     // visit gather node should ignore it, returning the visit result of its only children
     #[test]
     fn test_visit_gather() {
         let test_query = "SELECT tconst FROM title_basics WHERE (runtimeminutes < 25)";
         let test_ast = parse_query(test_query).unwrap().body;
-        let scan_node = SeqScan{
+        let scan_node = SeqScan {
             parent_relationship: Some("Outer".to_string()),
             relation_name: "title_basics".to_string(),
             alias: None,
             filter: Some("(runtimeminutes < 25)".to_string()),
-            output: Some(vec![
-                "tconst".to_string(),
-            ]),
+            output: Some(vec!["tconst".to_string()]),
         };
         let gather_node = Gather {
             children: Some(vec![PlanNode::SeqScan(scan_node)]),
@@ -353,7 +357,8 @@ mod test_visit_nodes {
         let result = result.unwrap();
         assert_eq!(
             result, *test_ast,
-            "Mismatch: Parsed Result: {:#?}, Test AST: {:#?}", result, test_ast
+            "Mismatch: Parsed Result: {:#?}, Test AST: {:#?}",
+            result, test_ast
         );
     }
 }
@@ -374,7 +379,7 @@ impl FromStr for Value {
     fn from_str(value: &str) -> Result<Self, String> {
         match parse_expr(value) {
             Ok(Expr::Value(v)) => Ok(v.into()),
-            _ => Err(format!("Failed to parse value: '{}'", value))
+            _ => Err(format!("Failed to parse value: '{}'", value)),
         }
     }
 }
@@ -384,21 +389,13 @@ impl FromStr for ObjectName {
     fn from_str(name: &str) -> Result<Self, String> {
         match parse_expr(name) {
             // if is simple identifier, e.g. table1
-            Ok(Expr::Identifier(ident)) => {
-                Ok(ObjectName::from(
-                    vec![ident]
-                ))
-            },
+            Ok(Expr::Identifier(ident)) => Ok(ObjectName::from(vec![ident])),
             // if is compound identifier, e.g. db_schema.table1
-            Ok(Expr::CompoundIdentifier(idents)) => {
-                Ok(ObjectName::from(idents))
-            },
-            _ => {
-                Err(format!(
-                    "Failed to parse identifier: expected an identifier, but got '{}'",
-                    name
-                ))
-            }
+            Ok(Expr::CompoundIdentifier(idents)) => Ok(ObjectName::from(idents)),
+            _ => Err(format!(
+                "Failed to parse identifier: expected an identifier, but got '{}'",
+                name
+            )),
         }
     }
 }
@@ -409,14 +406,17 @@ impl FromStr for Ident {
         // only accept one identifier ?
         match parse_expr(name) {
             Ok(Expr::Identifier(ident)) => Ok(ident),
-            _ => Err(format!("Failed to parse identifier, expected an identifier, but got '{}'", name))
+            _ => Err(format!(
+                "Failed to parse identifier, expected an identifier, but got '{}'",
+                name
+            )),
         }
     }
 }
 
 /// helper function used for parsing a string expression into a sqlparser::ast::Expr
 fn parse_expr(expr: &str) -> Result<Expr, parser::ParserError> {
-    let parser= Parser::new(&GenericDialect);
+    let parser = Parser::new(&GenericDialect);
     let result = parser.try_with_sql(expr);
     let mut parser = result.unwrap();
     let _token = parser.token_at(0).clone();
@@ -425,7 +425,7 @@ fn parse_expr(expr: &str) -> Result<Expr, parser::ParserError> {
 
 /// helper function used for parsing a SQL query string into a Box<sqlparser::ast::Query>
 fn parse_query(query: &str) -> Result<Box<Query>, parser::ParserError> {
-    let parser= Parser::new(&GenericDialect);
+    let parser = Parser::new(&GenericDialect);
     let result = parser.try_with_sql(query);
     let mut parser = result.unwrap();
     let _token = parser.token_at(0).clone();
@@ -440,94 +440,80 @@ mod test_from_str {
 
     #[test]
     fn test_equality_expr() {
-        let expr = parse_expr("(title_principals.tconst = title_basics.tconst)")
-        .unwrap();
+        let expr = parse_expr("(title_principals.tconst = title_basics.tconst)").unwrap();
         println!("{:#?}", expr);
         assert!(matches!(expr, Expr::Nested(inner) if matches!(*inner, Expr::BinaryOp { .. })));
     }
 
     #[test]
     fn test_single_quoted_string_expr() {
-        let expr = parse_expr("(category = 'actor'::text)")
-        .unwrap();
+        let expr = parse_expr("(category = 'actor'::text)").unwrap();
         println!("{:#?}", expr);
     }
 
     #[test]
     fn test_value() {
-        let expr = parse_expr("'value1'")
-        .unwrap();
+        let expr = parse_expr("'value1'").unwrap();
         println!("{:#?}", expr);
 
-        let expr = parse_expr("123")
-        .unwrap();
+        let expr = parse_expr("123").unwrap();
         println!("{:#?}", expr);
     }
 
     #[test]
     fn test_simple_identifier() {
-        let expr = parse_expr("title_basics")
-        .unwrap();
+        let expr = parse_expr("title_basics").unwrap();
         println!("{:#?}", expr);
     }
-    
+
     #[test]
     fn test_simple_identifier_with_schema_name() {
-        let expr = parse_expr("db_schema.title_basics")
-        .unwrap();
+        let expr = parse_expr("db_schema.title_basics").unwrap();
         println!("{:#?}", expr);
     }
 
     #[test]
     fn test_compound_identifier() {
-        let expr = parse_expr("title_principals.tconst")
-        .unwrap();
+        let expr = parse_expr("title_principals.tconst").unwrap();
         println!("{:#?}", expr);
-        assert!(matches!(expr, Expr::CompoundIdentifier{..}));
+        assert!(matches!(expr, Expr::CompoundIdentifier { .. }));
     }
 
     #[test]
     fn test_type_cast_expr() {
-        let expr = parse_expr("(name_basics.nconst)::text)")
-        .unwrap();
+        let expr = parse_expr("(name_basics.nconst)::text)").unwrap();
         println!("{:#?}", expr);
         assert!(matches!(expr, Expr::Cast { .. }));
 
-        let expr = parse_expr("((startyear)::numeric > $2)")
-        .unwrap();
+        let expr = parse_expr("((startyear)::numeric > $2)").unwrap();
         println!("{:#?}", expr);
     }
 
     #[test]
     fn test_and_expr() {
-        let expr = parse_expr("((category = 'actor'::text) AND (job = 'actor'::text))")
-        .unwrap();
+        let expr = parse_expr("((category = 'actor'::text) AND (job = 'actor'::text))").unwrap();
         println!("{:#?}", expr);
     }
 
     #[test]
     fn test_pg_like_match_expr() {
-        let expr = parse_expr("(genres ~~ '%Comedy%'::text)")
-        .unwrap();
+        let expr = parse_expr("(genres ~~ '%Comedy%'::text)").unwrap();
         println!("{:#?}", expr);
     }
 
     /// for matching this placeholder, we need to parse the "InitPlan .. (return $1)" statement in "Subplan Name" field
     #[test]
     fn test_subquery_placeholder_expr() {
-        let expr = parse_expr("((runtimeminutes)::numeric > $1)")
-        .unwrap();
+        let expr = parse_expr("((runtimeminutes)::numeric > $1)").unwrap();
         println!("{:#?}", expr);
     }
 
     #[test]
     fn test_is_null_expr() {
-        let expr = parse_expr("(runtimeminutes IS NOT NULL)")
-        .unwrap();
+        let expr = parse_expr("(runtimeminutes IS NOT NULL)").unwrap();
         println!("{:#?}", expr);
 
-        let expr = parse_expr("(runtimeminutes IS NULL)")
-        .unwrap();
+        let expr = parse_expr("(runtimeminutes IS NULL)").unwrap();
         println!("{:#?}", expr);
     }
 
@@ -541,8 +527,7 @@ mod test_from_str {
     /// In this case, the parser IGNORES the DESC suffix, we need to parse Sort Key field ourselfs, handling DESC
     #[test]
     fn fail_test_sort_key_desc() {
-        let expr = parse_expr("title_basics.primarytitle DESC")
-        .unwrap();
+        let expr = parse_expr("title_basics.primarytitle DESC").unwrap();
         println!("{:#?}", expr);
     }
 }
