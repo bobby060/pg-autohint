@@ -11,8 +11,7 @@ where startyear > (
         and nconst in (
             select nconst 
             from name_basics
-            where primaryname like 'Tom%'
-        )
+        ) limit 10
     )
 )
 limit 10;

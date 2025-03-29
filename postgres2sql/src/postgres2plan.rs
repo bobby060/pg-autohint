@@ -6,7 +6,7 @@ use sqlparser::ast::SetOperator;
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PlanWrapper {
     #[serde(rename = "Plan")]
-    plan: PlanNode,
+    pub plan: PlanNode,
 }
 
 /// Plan node type enum for `serde` json parsing
@@ -33,6 +33,10 @@ pub enum PlanNode {
     Gather(Gather),
     #[serde(rename = "Gather Merge")]
     GatherMerge(GatherMerge),
+    #[serde(rename = "Nested Loop")]
+    NestedLoopJoin(NestedLoopJoin),
+    #[serde(rename = "Index Only Scan")]
+    IndexOnlyScan(IndexOnlyScan),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -81,6 +85,26 @@ pub struct IndexScan {
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IndexOnlyScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub relation_name: String,
+    #[serde(rename = "Index Name")]
+    pub index_name: String,
+    #[serde(rename = "Alias")]
+    pub alias: Option<String>,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Scan Direction")]
+    pub scan_direction: Option<String>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Index Cond")]
+    pub index_cond: Option<String>,
+}
 // joins
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Hash {
@@ -126,6 +150,23 @@ pub struct MergeJoin {
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct NestedLoopJoin {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Join Type")]
+    pub join_type: String,
+    #[serde(rename = "Inner Unique")]
+    pub inner_unique: bool,
+    #[serde(rename = "Join Filter")]
+    pub join_filter: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+
 // limit, unique, sort
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Limit {
@@ -156,6 +197,7 @@ pub struct Sort {
 pub enum ScanNode {
     SeqScan(SeqScan),
     IndexScan(IndexScan),
+    IndexOnlyScan(IndexOnlyScan),
 }
 
 impl ScanNode {
@@ -163,6 +205,7 @@ impl ScanNode {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.alias.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.alias.clone(),
+            ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.alias.clone(),
         }
     }
 
@@ -170,6 +213,7 @@ impl ScanNode {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.filter.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.filter.clone(),
+            ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.filter.clone(),
         }
     }
 
@@ -177,6 +221,7 @@ impl ScanNode {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.relation_name.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.relation_name.clone(),
+            ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.relation_name.clone(),
         }
     }
 
@@ -184,6 +229,7 @@ impl ScanNode {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.output.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.output.clone(),
+            ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.output.clone(),
         }
     }
 }
@@ -193,7 +239,7 @@ impl ScanNode {
 pub enum JoinNode {
     HashJoin(HashJoin),
     MergeJoin(MergeJoin),
-    // NestedLoopJoin(NestedLoopJoin),
+    NestedLoopJoin(NestedLoopJoin),
 }
 
 impl JoinNode {
@@ -201,7 +247,7 @@ impl JoinNode {
         match self {
             JoinNode::HashJoin(hash_join) => hash_join.children.clone(),
             JoinNode::MergeJoin(merge_join) => merge_join.children.clone(),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
         }
     }
 
@@ -209,7 +255,7 @@ impl JoinNode {
         match self {
             JoinNode::HashJoin(hash_join) => hash_join.join_type.clone(),
             JoinNode::MergeJoin(merge_join) => merge_join.join_type.clone(),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.join_type.clone(),
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.join_type.clone(),
         }
     }
 
@@ -217,7 +263,7 @@ impl JoinNode {
         match self {
             JoinNode::HashJoin(hash_join) => hash_join.join_filter.clone(),
             JoinNode::MergeJoin(merge_join) => merge_join.join_filter.clone(),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => None,
+            JoinNode::NestedLoopJoin(_) => None,
         }
     }
 
@@ -225,15 +271,15 @@ impl JoinNode {
         match self {
             JoinNode::HashJoin(hash_join) => hash_join.inner_unique,
             JoinNode::MergeJoin(merge_join) => merge_join.inner_unique,
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.inner_unique,
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.inner_unique,
         }
     }
 
-    pub fn get_condition(&self) -> String {
+    pub fn get_condition(&self) -> Option<String> {
         match self {
-            JoinNode::HashJoin(hash_join) => hash_join.hash_cond.clone(),
-            JoinNode::MergeJoin(merge_join) => merge_join.merge_cond.clone(),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.hash_cond.clone(),
+            JoinNode::HashJoin(hash_join) => Some(hash_join.hash_cond.clone()),
+            JoinNode::MergeJoin(merge_join) => Some(merge_join.merge_cond.clone()),
+            JoinNode::NestedLoopJoin(_) => None,
         }
     }
 
@@ -241,7 +287,7 @@ impl JoinNode {
         match self {
             JoinNode::HashJoin(hash_join) => hash_join.output.clone(),
             JoinNode::MergeJoin(merge_join) => merge_join.output.clone(),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.output.clone(),
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.output.clone(),
         }
     }
 }

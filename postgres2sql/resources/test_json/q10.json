@@ -2,226 +2,131 @@
     {
         "Plan": {
             "Node Type": "Limit",
-            "Parallel Aware": false,
-            "Async Capable": false,
-            "Startup Cost": 1814187.72,
-            "Total Cost": 1814188.61,
+            "Parent Relationship": null,
             "Plan Rows": 10,
-            "Plan Width": 22,
-            "Output": [
-                "title_basics.primarytitle",
-                "title_basics.startyear"
-            ],
             "Plans": [
                 {
                     "Node Type": "Aggregate",
-                    "Strategy": "Plain",
-                    "Partial Mode": "Finalize",
                     "Parent Relationship": "InitPlan",
-                    "Subplan Name": "InitPlan 1 (returns $1)",
-                    "Parallel Aware": false,
-                    "Async Capable": false,
-                    "Startup Cost": 1814187.71,
-                    "Total Cost": 1814187.72,
-                    "Plan Rows": 1,
-                    "Plan Width": 32,
-                    "Output": [
-                        "avg(title_basics_1.startyear)"
-                    ],
+                    "Strategy": "Plain",
+                    "Partial Mode": "Simple",
+                    "Subplan Name": "InitPlan 1 (returns $2)",
                     "Plans": [
                         {
-                            "Node Type": "Gather",
+                            "Node Type": "Nested Loop",
                             "Parent Relationship": "Outer",
-                            "Parallel Aware": false,
-                            "Async Capable": false,
-                            "Startup Cost": 1814187.49,
-                            "Total Cost": 1814187.70,
-                            "Plan Rows": 2,
-                            "Plan Width": 32,
-                            "Output": [
-                                "(PARTIAL avg(title_basics_1.startyear))"
-                            ],
-                            "Workers Planned": 2,
-                            "Single Copy": false,
+                            "Join Type": "Inner",
+                            "Inner Unique": false,
+                            "Join Filter": null,
                             "Plans": [
                                 {
                                     "Node Type": "Aggregate",
-                                    "Strategy": "Plain",
-                                    "Partial Mode": "Partial",
                                     "Parent Relationship": "Outer",
-                                    "Parallel Aware": false,
-                                    "Async Capable": false,
-                                    "Startup Cost": 1813187.49,
-                                    "Total Cost": 1813187.50,
-                                    "Plan Rows": 1,
-                                    "Plan Width": 32,
-                                    "Output": [
-                                        "PARTIAL avg(title_basics_1.startyear)"
-                                    ],
+                                    "Strategy": "Hashed",
+                                    "Partial Mode": "Simple",
+                                    "Subplan Name": null,
                                     "Plans": [
                                         {
-                                            "Node Type": "Hash Join",
+                                            "Node Type": "Limit",
                                             "Parent Relationship": "Outer",
-                                            "Parallel Aware": true,
-                                            "Async Capable": false,
-                                            "Join Type": "Semi",
-                                            "Startup Cost": 1583541.82,
-                                            "Total Cost": 1812959.70,
-                                            "Plan Rows": 91119,
-                                            "Plan Width": 2,
-                                            "Output": [
-                                                "title_basics_1.startyear"
-                                            ],
-                                            "Inner Unique": false,
-                                            "Hash Cond": "(title_basics_1.tconst = title_principals.tconst)",
+                                            "Plan Rows": 10,
                                             "Plans": [
                                                 {
-                                                    "Node Type": "Seq Scan",
+                                                    "Node Type": "Nested Loop",
                                                     "Parent Relationship": "Outer",
-                                                    "Parallel Aware": true,
-                                                    "Async Capable": false,
-                                                    "Relation Name": "title_basics",
-                                                    "Schema": "public",
-                                                    "Alias": "title_basics_1",
-                                                    "Startup Cost": 0.00,
-                                                    "Total Cost": 215771.70,
-                                                    "Plan Rows": 4812370,
-                                                    "Plan Width": 12,
-                                                    "Output": [
-                                                        "title_basics_1.tconst",
-                                                        "title_basics_1.titletype",
-                                                        "title_basics_1.primarytitle",
-                                                        "title_basics_1.originaltitle",
-                                                        "title_basics_1.isadult",
-                                                        "title_basics_1.startyear",
-                                                        "title_basics_1.endyear",
-                                                        "title_basics_1.runtimeminutes",
-                                                        "title_basics_1.genres"
-                                                    ]
-                                                },
-                                                {
-                                                    "Node Type": "Hash",
-                                                    "Parent Relationship": "Inner",
-                                                    "Parallel Aware": true,
-                                                    "Async Capable": false,
-                                                    "Startup Cost": 1582402.83,
-                                                    "Total Cost": 1582402.83,
-                                                    "Plan Rows": 91119,
-                                                    "Plan Width": 10,
-                                                    "Output": [
-                                                        "title_principals.tconst"
-                                                    ],
+                                                    "Join Type": "Semi",
+                                                    "Inner Unique": false,
+                                                    "Join Filter": null,
                                                     "Plans": [
                                                         {
-                                                            "Node Type": "Hash Join",
+                                                            "Node Type": "Seq Scan",
                                                             "Parent Relationship": "Outer",
-                                                            "Parallel Aware": true,
-                                                            "Async Capable": false,
-                                                            "Join Type": "Semi",
-                                                            "Startup Cost": 226542.80,
-                                                            "Total Cost": 1582402.83,
-                                                            "Plan Rows": 91119,
-                                                            "Plan Width": 10,
+                                                            "Relation Name": "title_principals",
+                                                            "Alias": "title_principals",
+                                                            "Filter": "(title_principals.category = 'actor'::text)",
                                                             "Output": [
-                                                                "title_principals.tconst"
-                                                            ],
-                                                            "Inner Unique": false,
-                                                            "Hash Cond": "(title_principals.nconst = (name_basics.nconst)::text)",
-                                                            "Plans": [
-                                                                {
-                                                                    "Node Type": "Seq Scan",
-                                                                    "Parent Relationship": "Outer",
-                                                                    "Parallel Aware": true,
-                                                                    "Async Capable": false,
-                                                                    "Relation Name": "title_principals",
-                                                                    "Schema": "public",
-                                                                    "Alias": "title_principals",
-                                                                    "Startup Cost": 0.00,
-                                                                    "Total Cost": 1331162.92,
-                                                                    "Plan Rows": 9022254,
-                                                                    "Plan Width": 20,
-                                                                    "Output": [
-                                                                        "title_principals.tconst",
-                                                                        "title_principals.ordering",
-                                                                        "title_principals.nconst",
-                                                                        "title_principals.category",
-                                                                        "title_principals.job",
-                                                                        "title_principals.characters"
-                                                                    ],
-                                                                    "Filter": "(title_principals.category = 'actor'::text)"
-                                                                },
-                                                                {
-                                                                    "Node Type": "Hash",
-                                                                    "Parent Relationship": "Inner",
-                                                                    "Parallel Aware": true,
-                                                                    "Async Capable": false,
-                                                                    "Startup Cost": 225791.34,
-                                                                    "Total Cost": 225791.34,
-                                                                    "Plan Rows": 60117,
-                                                                    "Plan Width": 10,
-                                                                    "Output": [
-                                                                        "name_basics.nconst"
-                                                                    ],
-                                                                    "Plans": [
-                                                                        {
-                                                                            "Node Type": "Seq Scan",
-                                                                            "Parent Relationship": "Outer",
-                                                                            "Parallel Aware": true,
-                                                                            "Async Capable": false,
-                                                                            "Relation Name": "name_basics",
-                                                                            "Schema": "public",
-                                                                            "Alias": "name_basics",
-                                                                            "Startup Cost": 0.00,
-                                                                            "Total Cost": 225791.34,
-                                                                            "Plan Rows": 60117,
-                                                                            "Plan Width": 10,
-                                                                            "Output": [
-                                                                                "name_basics.nconst"
-                                                                            ],
-                                                                            "Filter": "(name_basics.primaryname ~~ 'Tom%'::text)"
-                                                                        }
-                                                                    ]
-                                                                }
+                                                                "title_principals.tconst",
+                                                                "title_principals.ordering",
+                                                                "title_principals.nconst",
+                                                                "title_principals.category",
+                                                                "title_principals.job",
+                                                                "title_principals.characters"
                                                             ]
+                                                        },
+                                                        {
+                                                            "Node Type": "Index Only Scan",
+                                                            "Parent Relationship": "Inner",
+                                                            "Relation Name": "name_basics",
+                                                            "Index Name": "name_basics_pkey",
+                                                            "Alias": "name_basics",
+                                                            "Filter": null,
+                                                            "Scan Direction": "Forward",
+                                                            "Output": [
+                                                                "name_basics.nconst"
+                                                            ],
+                                                            "Index Cond": "(name_basics.nconst = title_principals.nconst)"
                                                         }
+                                                    ],
+                                                    "Output": [
+                                                        "title_principals.tconst"
                                                     ]
                                                 }
+                                            ],
+                                            "Output": [
+                                                "title_principals.tconst"
                                             ]
                                         }
+                                    ],
+                                    "Output": [
+                                        "title_principals.tconst"
+                                    ]
+                                },
+                                {
+                                    "Node Type": "Index Scan",
+                                    "Parent Relationship": "Inner",
+                                    "Relation Name": "title_basics",
+                                    "Index Name": "title_basics_pkey",
+                                    "Alias": "title_basics_1",
+                                    "Filter": null,
+                                    "Scan Direction": "Forward",
+                                    "Output": [
+                                        "title_basics_1.tconst",
+                                        "title_basics_1.titletype",
+                                        "title_basics_1.primarytitle",
+                                        "title_basics_1.originaltitle",
+                                        "title_basics_1.isadult",
+                                        "title_basics_1.startyear",
+                                        "title_basics_1.endyear",
+                                        "title_basics_1.runtimeminutes",
+                                        "title_basics_1.genres"
                                     ]
                                 }
+                            ],
+                            "Output": [
+                                "title_basics_1.startyear"
                             ]
                         }
+                    ],
+                    "Output": [
+                        "avg(title_basics_1.startyear)"
                     ]
                 },
                 {
                     "Node Type": "Seq Scan",
                     "Parent Relationship": "Outer",
-                    "Parallel Aware": false,
-                    "Async Capable": false,
                     "Relation Name": "title_basics",
-                    "Schema": "public",
                     "Alias": "title_basics",
-                    "Startup Cost": 0.00,
-                    "Total Cost": 340893.33,
-                    "Plan Rows": 3849896,
-                    "Plan Width": 22,
+                    "Filter": "((title_basics.startyear)::numeric > $2)",
                     "Output": [
                         "title_basics.primarytitle",
                         "title_basics.startyear"
-                    ],
-                    "Filter": "((title_basics.startyear)::numeric > $1)"
+                    ]
                 }
+            ],
+            "Output": [
+                "title_basics.primarytitle",
+                "title_basics.startyear"
             ]
-        },
-        "JIT": {
-            "Functions": 31,
-            "Options": {
-                "Inlining": true,
-                "Optimization": true,
-                "Expressions": true,
-                "Deforming": true
-            }
         }
     }
 ]

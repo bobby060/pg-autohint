@@ -13,12 +13,6 @@ use sqlparser::{ast::*, parser};
 pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     let expr = plan.visit_plan_node()?;
 
-    // 1.2 If set, build of children recursively
-
-    // 2. Build order by
-
-    // 3. Build limit
-
     // Placeholder for the AST
     if let SetExpr::Query(query) = expr {
         Ok(*query)
@@ -44,6 +38,12 @@ trait Visit {
     fn visit_plan_node(self) -> Result<SetExpr, String>;
 }
 
+impl Visit for PlanWrapper {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        self.plan.visit_plan_node()
+    }
+}
+
 impl Visit for PlanNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         match self {
@@ -59,6 +59,8 @@ impl Visit for PlanNode {
             PlanNode::Gather(gather) => gather.visit_plan_node(),
             PlanNode::Aggregate(agg) => agg.visit_plan_node(),
             PlanNode::GatherMerge(gather_merge) => gather_merge.visit_plan_node(),
+            PlanNode::NestedLoopJoin(join) => JoinNode::NestedLoopJoin(join).visit_plan_node(),
+            PlanNode::IndexOnlyScan(scan) => ScanNode::IndexOnlyScan(scan).visit_plan_node(),
             // _ => Err("Node not implemented".to_string()),
         }
     }
@@ -182,6 +184,7 @@ impl Visit for JoinNode {
         // merge child table
 
         // Assuming both children are SELECTs...
+        // TODO: does postgres join always have 2 children?
         assert!(children_exprs.len() == 2);
 
         let left_select = children_exprs[0].as_select().unwrap();
@@ -216,7 +219,7 @@ impl Visit for JoinNode {
         // Combine join predicate with selection
         select.selection = Some(Expr::BinaryOp {
             left: Box::new(select.selection.unwrap()),
-            right: Box::new(Expr::from_str(self.get_condition().as_str())?),
+            right: Box::new(Expr::from_str(self.get_condition().unwrap().as_str())?),
             op: BinaryOperator::And,
         });
 
