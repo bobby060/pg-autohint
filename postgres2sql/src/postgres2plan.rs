@@ -236,6 +236,14 @@ impl JoinNode {
             // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.hash_cond.clone(),
         }
     }
+
+    pub fn get_output(&self) -> Option<Vec<String>> {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.output.clone(),
+            JoinNode::MergeJoin(merge_join) => merge_join.output.clone(),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.output.clone(),
+        }
+    }
 }
 
 // Group of all set operators

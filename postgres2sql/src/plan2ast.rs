@@ -50,8 +50,8 @@ impl Visit for PlanNode {
             PlanNode::SeqScan(scan) => ScanNode::SeqScan(scan).visit_plan_node(),
             PlanNode::IndexScan(scan) => ScanNode::IndexScan(scan).visit_plan_node(),
             PlanNode::Hash(hash) => hash.visit_plan_node(),
-            PlanNode::HashJoin(join) => join.visit_plan_node(),
-            PlanNode::MergeJoin(join) => join.visit_plan_node(),
+            PlanNode::HashJoin(join) => JoinNode::HashJoin(join).visit_plan_node(),
+            PlanNode::MergeJoin(join) => JoinNode::MergeJoin(join).visit_plan_node(),
             PlanNode::Limit(limit) => limit.visit_plan_node(),
             PlanNode::Sort(sort) => sort.visit_plan_node(),
             PlanNode::Unique(unique) => SetNode::Unique(unique).visit_plan_node(),
@@ -163,26 +163,79 @@ impl Visit for Limit {
 }
 
 impl Visit for Hash {
+    // Hash node is a noop, just return the child
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        self.children.unwrap()[0].to_owned().visit_plan_node()
     }
 }
 
-impl Visit for HashJoin {
+impl Visit for JoinNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         let mut children_exprs = vec![];
-        for child in self.children.unwrap() {
+        for child in self.get_children().unwrap() {
             let child_expr = child.visit_plan_node()?;
             children_exprs.push(child_expr);
         }
 
-        Err("Not implemented".to_string())
-    }
-}
+        // Add join condition to predicate
+        // make project correct
+        // merge child table
 
-impl Visit for MergeJoin {
-    fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        // Assuming both children are SELECTs...
+        assert!(children_exprs.len() == 2);
+
+        let left_select = children_exprs[0].as_select().unwrap();
+        let right_select = children_exprs[1].as_select().unwrap();
+
+        let mut select = left_select.to_owned();
+
+        select.projection = parse_projections(self.get_output().unwrap())?;
+
+        for table in right_select.from.iter() {
+            select.from.push(table.to_owned());
+        }
+
+        // How to handle different join types?
+
+        // combine table predicates
+
+        select.selection = if let Some(selection) = select.selection {
+            if let Some(right_selection) = right_select.selection.as_ref() {
+                Some(Expr::BinaryOp {
+                    left: Box::new(selection),
+                    right: Box::new(right_selection.to_owned()),
+                    op: BinaryOperator::And,
+                })
+            } else {
+                Some(selection)
+            }
+        } else {
+            right_select.selection.as_ref().map(|expr| expr.to_owned())
+        };
+
+        // Combine join predicate with selection
+        select.selection = Some(Expr::BinaryOp {
+            left: Box::new(select.selection.unwrap()),
+            right: Box::new(Expr::from_str(self.get_condition().as_str())?),
+            op: BinaryOperator::And,
+        });
+
+        // Combine having
+        select.having = if let Some(having) = select.having {
+            if let Some(right_having) = right_select.having.as_ref() {
+                Some(Expr::BinaryOp {
+                    left: Box::new(having),
+                    right: Box::new(right_having.to_owned()),
+                    op: BinaryOperator::And,
+                })
+            } else {
+                Some(having)
+            }
+        } else {
+            right_select.having.as_ref().map(|expr| expr.to_owned())
+        };
+
+        Ok(SetExpr::Select(Box::new(select)))
     }
 }
 
@@ -237,7 +290,7 @@ impl Visit for Sort {
 
 impl Visit for SetNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("Not implemented".to_string())
+        Err("SetNode not implemented".to_string())
 
         // let children = self.get_children();
 
