@@ -150,9 +150,27 @@ pub struct Sort {
     pub output: Option<Vec<String>>,
 }
 
+impl PlanNode {
+    pub fn get_children(&self) -> Option<Vec<PlanNode>> {
+        match self {
+            PlanNode::Aggregate(aggregate) => aggregate.children.clone(),
+            PlanNode::SeqScan(_) => None,
+            PlanNode::IndexScan(_) => None,
+            PlanNode::Hash(hash) => hash.children.clone(),
+            PlanNode::HashJoin(hash_join) => hash_join.children.clone(),
+            PlanNode::MergeJoin(merge_join) => merge_join.children.clone(),
+            PlanNode::Limit(limit) => limit.children.clone(),
+            PlanNode::Sort(sort) => sort.children.clone(),
+            PlanNode::Unique(unique) => unique.children.clone(),
+            PlanNode::Append(append) => append.children.clone(),
+            PlanNode::Gather(gather) => gather.children.clone(),
+            PlanNode::GatherMerge(gather_merge) => gather_merge.children.clone(),
+        }
+    }
+}
+
 // Group of all scan operators
 #[derive(Debug, Serialize, Deserialize, Clone)]
-
 pub enum ScanNode {
     SeqScan(SeqScan),
     IndexScan(IndexScan),
@@ -180,6 +198,13 @@ impl ScanNode {
         }
     }
 
+    pub fn get_index_name(&self) -> Option<String> {
+        match self {
+            ScanNode::SeqScan(_) => None,
+            ScanNode::IndexScan(index_scan) => Some(index_scan.index_name.clone()),
+        }
+    }
+
     pub fn get_output(&self) -> Option<Vec<String>> {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.output.clone(),
@@ -201,6 +226,34 @@ impl JoinNode {
         match self {
             JoinNode::HashJoin(hash_join) => hash_join.children.clone(),
             JoinNode::MergeJoin(merge_join) => merge_join.children.clone(),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+        }
+    }
+
+    pub fn get_left(&self) -> Option<PlanNode> {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join
+                .children
+                .as_ref()
+                .and_then(|children| children.get(0).cloned()),
+            JoinNode::MergeJoin(merge_join) => merge_join
+                .children
+                .as_ref()
+                .and_then(|children| children.get(0).cloned()),
+            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+        }
+    }
+
+    pub fn get_right(&self) -> Option<PlanNode> {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join
+                .children
+                .as_ref()
+                .and_then(|children| children.get(1).cloned()),
+            JoinNode::MergeJoin(merge_join) => merge_join
+                .children
+                .as_ref()
+                .and_then(|children| children.get(1).cloned()),
             // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
         }
     }
