@@ -75,6 +75,9 @@ pub enum PgHint {
     MergeJoin {
         tables: String,
     },
+    IndexOnlyScan {
+        table: String,
+    },
     // NestLoop {
     //     tables: String
     // },
@@ -99,6 +102,7 @@ impl fmt::Display for PgHint {
             PgHint::JoinOrder { join_order } => f.write_str(&format!("Leading({})", join_order)),
             PgHint::HashJoin { tables } => f.write_str(&format!("HashJoin({})", tables)),
             PgHint::MergeJoin { tables } => f.write_str(&format!("MergeJoin({})", tables)),
+            PgHint::IndexOnlyScan { table } => f.write_str(&format!("IndexOnlyScan({})", table)),
         }
     }
 }
@@ -154,9 +158,9 @@ impl PgHintList {
             JoinNode::MergeJoin(_) => PgHint::MergeJoin {
                 tables: join_order.clone(),
             }, // // if we want to convert NLJ to Hash blindly
-               // JoinNode::NestedLoopJoin(_) => {
-               //    PgHint::HashJoin { tables: join_order.clone() };
-               // }
+            JoinNode::NestedLoopJoin(_) => PgHint::HashJoin {
+                tables: join_order.clone(),
+            },
         };
         // TODO: now optimize_join_method is a no-op
         self.add_hint(optimize_join_method(join_method));
@@ -177,6 +181,9 @@ impl PgHintList {
                     index: Some(index_name),
                 }
             }
+            ScanNode::IndexOnlyScan(_) => PgHint::IndexOnlyScan {
+                table: rel_name.clone(),
+            },
         };
         // TODO: now optimize_access_method is a no-op
         self.add_hint(optimize_access_method(access_method));

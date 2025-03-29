@@ -206,6 +206,8 @@ impl PlanNode {
             PlanNode::Append(append) => append.children.clone(),
             PlanNode::Gather(gather) => gather.children.clone(),
             PlanNode::GatherMerge(gather_merge) => gather_merge.children.clone(),
+            PlanNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+            PlanNode::IndexOnlyScan(_) => None,
         }
     }
 }
@@ -247,6 +249,7 @@ impl ScanNode {
         match self {
             ScanNode::SeqScan(_) => None,
             ScanNode::IndexScan(index_scan) => Some(index_scan.index_name.clone()),
+            ScanNode::IndexOnlyScan(index_only_scan) => Some(index_only_scan.index_name.clone()),
         }
     }
 
@@ -286,7 +289,10 @@ impl JoinNode {
                 .children
                 .as_ref()
                 .and_then(|children| children.get(0).cloned()),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join
+                .children
+                .as_ref()
+                .and_then(|children| children.get(0).cloned()),
         }
     }
 
@@ -300,7 +306,10 @@ impl JoinNode {
                 .children
                 .as_ref()
                 .and_then(|children| children.get(1).cloned()),
-            // JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join
+                .children
+                .as_ref()
+                .and_then(|children| children.get(1).cloned()),
         }
     }
 
