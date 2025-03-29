@@ -1,0 +1,100 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 517281.05,
+            "Total Cost": 517283.79,
+            "Plan Rows": 10,
+            "Plan Width": 39,
+            "Output": [
+                "tb.tconst",
+                "tb.primarytitle",
+                "tb.titletype"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Hash Join",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Join Type": "Right Anti",
+                    "Startup Cost": 517281.05,
+                    "Total Cost": 3538393.60,
+                    "Plan Rows": 10997116,
+                    "Plan Width": 39,
+                    "Output": [
+                        "tb.tconst",
+                        "tb.primarytitle",
+                        "tb.titletype"
+                    ],
+                    "Inner Unique": false,
+                    "Hash Cond": "(ta.titleid = tb.tconst)",
+                    "Plans": [
+                        {
+                            "Node Type": "Seq Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Relation Name": "title_akas",
+                            "Schema": "public",
+                            "Alias": "ta",
+                            "Startup Cost": 0.00,
+                            "Total Cost": 1005836.68,
+                            "Plan Rows": 51659668,
+                            "Plan Width": 10,
+                            "Output": [
+                                "ta.titleid"
+                            ]
+                        },
+                        {
+                            "Node Type": "Hash",
+                            "Parent Relationship": "Inner",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Startup Cost": 282904.91,
+                            "Total Cost": 282904.91,
+                            "Plan Rows": 11538491,
+                            "Plan Width": 39,
+                            "Output": [
+                                "tb.tconst",
+                                "tb.primarytitle",
+                                "tb.titletype"
+                            ],
+                            "Plans": [
+                                {
+                                    "Node Type": "Seq Scan",
+                                    "Parent Relationship": "Outer",
+                                    "Parallel Aware": false,
+                                    "Async Capable": false,
+                                    "Relation Name": "title_basics",
+                                    "Schema": "public",
+                                    "Alias": "tb",
+                                    "Startup Cost": 0.00,
+                                    "Total Cost": 282904.91,
+                                    "Plan Rows": 11538491,
+                                    "Plan Width": 39,
+                                    "Output": [
+                                        "tb.tconst",
+                                        "tb.primarytitle",
+                                        "tb.titletype"
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "JIT": {
+            "Functions": 11,
+            "Options": {
+                "Inlining": true,
+                "Optimization": true,
+                "Expressions": true,
+                "Deforming": true
+            }
+        }
+    }
+]

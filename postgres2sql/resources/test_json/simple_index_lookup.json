@@ -1,0 +1,24 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Index Scan",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Scan Direction": "Forward",
+            "Index Name": "title_crew_pkey",
+            "Relation Name": "title_crew",
+            "Schema": "public",
+            "Alias": "title_crew",
+            "Startup Cost": 0.56,
+            "Total Cost": 17.73,
+            "Plan Rows": 3,
+            "Plan Width": 46,
+            "Output": [
+                "tconst",
+                "directors",
+                "writers"
+            ],
+            "Index Cond": "(title_crew.tconst = ANY ('{tt0000001,tt0000002,tt0100000}'::text[]))"
+        }
+    }
+]

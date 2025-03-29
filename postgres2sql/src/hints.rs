@@ -60,6 +60,12 @@ pub enum PgHint {
     NoIndexOnlyScan {
         table: String,
     },
+    ValueScan {
+        table: String,
+    },
+    SubqueryScan {
+        table: String,
+    },
     // Can add more hints here, just be sure to implement fmt::Display for them
     JoinOrder {
         join_order: String, // Maybe make this a vec string or a tree or something
@@ -98,8 +104,11 @@ impl fmt::Display for PgHint {
             PgHint::HashJoin { tables } => f.write_str(&format!("HashJoin({})", tables)),
             PgHint::MergeJoin { tables } => f.write_str(&format!("MergeJoin({})", tables)),
             PgHint::IndexOnlyScan { table } => f.write_str(&format!("IndexOnlyScan({})", table)),
+            PgHint::ValueScan { table } => f.write_str(&format!("ValueScan({})", table)),
+            PgHint::SubqueryScan { table } => f.write_str(&format!("SubqueryScan({})", table)),
         }
     }
 }
+
 
 // TODO: Add tests

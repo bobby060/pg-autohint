@@ -1,0 +1,116 @@
+[
+    {
+        "Plan": {
+            "Node Type": "SetOp",
+            "Strategy": "Hashed",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Command": "Intersect",
+            "Startup Cost": 0.56,
+            "Total Cost": 35.60,
+            "Plan Rows": 3,
+            "Plan Width": 100,
+            "Output": [
+                "\"*SELECT* 1\".tconst",
+                "\"*SELECT* 1\".directors",
+                "\"*SELECT* 1\".writers",
+                "(0)"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Append",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 0.56,
+                    "Total Cost": 35.55,
+                    "Plan Rows": 6,
+                    "Plan Width": 100,
+                    "Subplans Removed": 0,
+                    "Plans": [
+                        {
+                            "Node Type": "Subquery Scan",
+                            "Parent Relationship": "Member",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Alias": "*SELECT* 1",
+                            "Startup Cost": 0.56,
+                            "Total Cost": 17.76,
+                            "Plan Rows": 3,
+                            "Plan Width": 50,
+                            "Output": [
+                                "\"*SELECT* 1\".tconst",
+                                "\"*SELECT* 1\".directors",
+                                "\"*SELECT* 1\".writers",
+                                "0"
+                            ],
+                            "Plans": [
+                                {
+                                    "Node Type": "Index Scan",
+                                    "Parent Relationship": "Subquery",
+                                    "Parallel Aware": false,
+                                    "Async Capable": false,
+                                    "Scan Direction": "Forward",
+                                    "Index Name": "title_crew_pkey",
+                                    "Relation Name": "title_crew",
+                                    "Schema": "public",
+                                    "Alias": "title_crew",
+                                    "Startup Cost": 0.56,
+                                    "Total Cost": 17.73,
+                                    "Plan Rows": 3,
+                                    "Plan Width": 46,
+                                    "Output": [
+                                        "title_crew.tconst",
+                                        "title_crew.directors",
+                                        "title_crew.writers"
+                                    ],
+                                    "Index Cond": "(title_crew.tconst = ANY ('{tt0000001,tt0000002,tt0100000}'::text[]))"
+                                }
+                            ]
+                        },
+                        {
+                            "Node Type": "Subquery Scan",
+                            "Parent Relationship": "Member",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Alias": "*SELECT* 2",
+                            "Startup Cost": 0.56,
+                            "Total Cost": 17.76,
+                            "Plan Rows": 3,
+                            "Plan Width": 50,
+                            "Output": [
+                                "\"*SELECT* 2\".tconst",
+                                "\"*SELECT* 2\".directors",
+                                "\"*SELECT* 2\".writers",
+                                "1"
+                            ],
+                            "Plans": [
+                                {
+                                    "Node Type": "Index Scan",
+                                    "Parent Relationship": "Subquery",
+                                    "Parallel Aware": false,
+                                    "Async Capable": false,
+                                    "Scan Direction": "Forward",
+                                    "Index Name": "title_crew_pkey",
+                                    "Relation Name": "title_crew",
+                                    "Schema": "public",
+                                    "Alias": "title_crew_1",
+                                    "Startup Cost": 0.56,
+                                    "Total Cost": 17.73,
+                                    "Plan Rows": 3,
+                                    "Plan Width": 46,
+                                    "Output": [
+                                        "title_crew_1.tconst",
+                                        "title_crew_1.directors",
+                                        "title_crew_1.writers"
+                                    ],
+                                    "Index Cond": "(title_crew_1.tconst = ANY ('{tt0000011,tt0100001,tt0100000}'::text[]))"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+]

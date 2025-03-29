@@ -1,0 +1,90 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 3.86,
+            "Total Cost": 4.48,
+            "Plan Rows": 10,
+            "Plan Width": 47,
+            "Output": [
+                "tb.tconst",
+                "tb.primarytitle",
+                "tb.titletype",
+                "tb.startyear",
+                "tr.average_rating"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Merge Join",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Join Type": "Anti",
+                    "Startup Cost": 3.86,
+                    "Total Cost": 623623.24,
+                    "Plan Rows": 9990387,
+                    "Plan Width": 47,
+                    "Output": [
+                        "tb.tconst",
+                        "tb.primarytitle",
+                        "tb.titletype",
+                        "tb.startyear",
+                        "tr.average_rating"
+                    ],
+                    "Inner Unique": false,
+                    "Merge Cond": "(tb.tconst = (tr.tconst)::text)",
+                    "Plans": [
+                        {
+                            "Node Type": "Index Scan",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Scan Direction": "Forward",
+                            "Index Name": "title_basics_pkey",
+                            "Relation Name": "title_basics",
+                            "Schema": "public",
+                            "Alias": "tb",
+                            "Startup Cost": 0.56,
+                            "Total Cost": 518440.72,
+                            "Plan Rows": 11538491,
+                            "Plan Width": 41,
+                            "Output": [
+                                "tb.tconst",
+                                "tb.titletype",
+                                "tb.primarytitle",
+                                "tb.originaltitle",
+                                "tb.isadult",
+                                "tb.startyear",
+                                "tb.endyear",
+                                "tb.runtimeminutes",
+                                "tb.genres"
+                            ]
+                        },
+                        {
+                            "Node Type": "Index Scan",
+                            "Parent Relationship": "Inner",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Scan Direction": "Forward",
+                            "Index Name": "title_ratings_pkey",
+                            "Relation Name": "title_ratings",
+                            "Schema": "public",
+                            "Alias": "tr",
+                            "Startup Cost": 0.43,
+                            "Total Cost": 56984.99,
+                            "Plan Rows": 1548104,
+                            "Plan Width": 16,
+                            "Output": [
+                                "tr.tconst",
+                                "tr.average_rating",
+                                "tr.num_votes"
+                            ]
+                        }
+                    ]
+                }
+            ]
+        }
+    }
+]

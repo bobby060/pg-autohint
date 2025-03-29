@@ -1,0 +1,4 @@
+SELECT *
+FROM title_basics
+LIMIT 5
+FOR UPDATE;

@@ -1,0 +1,296 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 21956545730.78,
+            "Total Cost": 21956545730.83,
+            "Plan Rows": 20,
+            "Plan Width": 118,
+            "Output": [
+                "nb.primaryname",
+                "(count(tb.tconst))",
+                "(avg(tr.average_rating))",
+                "(max(tr.average_rating))",
+                "(min(tr.average_rating))"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Sort",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 21956545730.78,
+                    "Total Cost": 21956547879.23,
+                    "Plan Rows": 859382,
+                    "Plan Width": 118,
+                    "Output": [
+                        "nb.primaryname",
+                        "(count(tb.tconst))",
+                        "(avg(tr.average_rating))",
+                        "(max(tr.average_rating))",
+                        "(min(tr.average_rating))"
+                    ],
+                    "Sort Key": [
+                        "(avg(tr.average_rating)) DESC"
+                    ],
+                    "Plans": [
+                        {
+                            "Node Type": "Aggregate",
+                            "Strategy": "Sorted",
+                            "Partial Mode": "Finalize",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Startup Cost": 21955805237.24,
+                            "Total Cost": 21956522862.93,
+                            "Plan Rows": 859382,
+                            "Plan Width": 118,
+                            "Output": [
+                                "nb.primaryname",
+                                "count(tb.tconst)",
+                                "avg(tr.average_rating)",
+                                "max(tr.average_rating)",
+                                "min(tr.average_rating)"
+                            ],
+                            "Group Key": [
+                                "nb.primaryname"
+                            ],
+                            "Filter": "(count(tb.tconst) >= 5)",
+                            "Plans": [
+                                {
+                                    "Node Type": "Gather Merge",
+                                    "Parent Relationship": "Outer",
+                                    "Parallel Aware": false,
+                                    "Async Capable": false,
+                                    "Startup Cost": 21955805237.24,
+                                    "Total Cost": 21956406846.41,
+                                    "Plan Rows": 5156290,
+                                    "Plan Width": 118,
+                                    "Output": [
+                                        "nb.primaryname",
+                                        "(PARTIAL count(tb.tconst))",
+                                        "(PARTIAL avg(tr.average_rating))",
+                                        "(PARTIAL max(tr.average_rating))",
+                                        "(PARTIAL min(tr.average_rating))"
+                                    ],
+                                    "Workers Planned": 2,
+                                    "Plans": [
+                                        {
+                                            "Node Type": "Sort",
+                                            "Parent Relationship": "Outer",
+                                            "Parallel Aware": false,
+                                            "Async Capable": false,
+                                            "Startup Cost": 21955804237.21,
+                                            "Total Cost": 21955810682.58,
+                                            "Plan Rows": 2578145,
+                                            "Plan Width": 118,
+                                            "Output": [
+                                                "nb.primaryname",
+                                                "(PARTIAL count(tb.tconst))",
+                                                "(PARTIAL avg(tr.average_rating))",
+                                                "(PARTIAL max(tr.average_rating))",
+                                                "(PARTIAL min(tr.average_rating))"
+                                            ],
+                                            "Sort Key": [
+                                                "nb.primaryname"
+                                            ],
+                                            "Plans": [
+                                                {
+                                                    "Node Type": "Aggregate",
+                                                    "Strategy": "Hashed",
+                                                    "Partial Mode": "Partial",
+                                                    "Parent Relationship": "Outer",
+                                                    "Parallel Aware": false,
+                                                    "Async Capable": false,
+                                                    "Startup Cost": 21916297994.28,
+                                                    "Total Cost": 21955212458.82,
+                                                    "Plan Rows": 2578145,
+                                                    "Plan Width": 118,
+                                                    "Output": [
+                                                        "nb.primaryname",
+                                                        "PARTIAL count(tb.tconst)",
+                                                        "PARTIAL avg(tr.average_rating)",
+                                                        "PARTIAL max(tr.average_rating)",
+                                                        "PARTIAL min(tr.average_rating)"
+                                                    ],
+                                                    "Group Key": [
+                                                        "nb.primaryname"
+                                                    ],
+                                                    "Planned Partitions": 256,
+                                                    "Plans": [
+                                                        {
+                                                            "Node Type": "Nested Loop",
+                                                            "Parent Relationship": "Outer",
+                                                            "Parallel Aware": false,
+                                                            "Async Capable": false,
+                                                            "Join Type": "Inner",
+                                                            "Startup Cost": 232778.82,
+                                                            "Total Cost": 21668340409.73,
+                                                            "Plan Rows": 2843957959,
+                                                            "Plan Width": 30,
+                                                            "Output": [
+                                                                "nb.primaryname",
+                                                                "tb.tconst",
+                                                                "tr.average_rating"
+                                                            ],
+                                                            "Inner Unique": false,
+                                                            "Join Filter": "(tc.directors ~~ (('%'::text || (nb.nconst)::text) || '%'::text))",
+                                                            "Plans": [
+                                                                {
+                                                                    "Node Type": "Nested Loop",
+                                                                    "Parent Relationship": "Outer",
+                                                                    "Parallel Aware": false,
+                                                                    "Async Capable": false,
+                                                                    "Join Type": "Inner",
+                                                                    "Startup Cost": 232778.82,
+                                                                    "Total Cost": 296599.13,
+                                                                    "Plan Rows": 39842,
+                                                                    "Plan Width": 29,
+                                                                    "Output": [
+                                                                        "tc.directors",
+                                                                        "tb.tconst",
+                                                                        "tr.average_rating"
+                                                                    ],
+                                                                    "Inner Unique": false,
+                                                                    "Join Filter": "(tc.tconst = tb.tconst)",
+                                                                    "Plans": [
+                                                                        {
+                                                                            "Node Type": "Hash Join",
+                                                                            "Parent Relationship": "Outer",
+                                                                            "Parallel Aware": true,
+                                                                            "Async Capable": false,
+                                                                            "Join Type": "Inner",
+                                                                            "Startup Cost": 232778.26,
+                                                                            "Total Cost": 259467.61,
+                                                                            "Plan Rows": 39842,
+                                                                            "Plan Width": 26,
+                                                                            "Output": [
+                                                                                "tb.tconst",
+                                                                                "tr.average_rating",
+                                                                                "tr.tconst"
+                                                                            ],
+                                                                            "Inner Unique": false,
+                                                                            "Hash Cond": "((tr.tconst)::text = tb.tconst)",
+                                                                            "Plans": [
+                                                                                {
+                                                                                    "Node Type": "Seq Scan",
+                                                                                    "Parent Relationship": "Outer",
+                                                                                    "Parallel Aware": true,
+                                                                                    "Async Capable": false,
+                                                                                    "Relation Name": "title_ratings",
+                                                                                    "Schema": "public",
+                                                                                    "Alias": "tr",
+                                                                                    "Startup Cost": 0.00,
+                                                                                    "Total Cost": 16354.43,
+                                                                                    "Plan Rows": 645043,
+                                                                                    "Plan Width": 16,
+                                                                                    "Output": [
+                                                                                        "tr.average_rating",
+                                                                                        "tr.tconst"
+                                                                                    ]
+                                                                                },
+                                                                                {
+                                                                                    "Node Type": "Hash",
+                                                                                    "Parent Relationship": "Inner",
+                                                                                    "Parallel Aware": true,
+                                                                                    "Async Capable": false,
+                                                                                    "Startup Cost": 227616.31,
+                                                                                    "Total Cost": 227616.31,
+                                                                                    "Plan Rows": 296956,
+                                                                                    "Plan Width": 10,
+                                                                                    "Output": [
+                                                                                        "tb.tconst"
+                                                                                    ],
+                                                                                    "Plans": [
+                                                                                        {
+                                                                                            "Node Type": "Seq Scan",
+                                                                                            "Parent Relationship": "Outer",
+                                                                                            "Parallel Aware": true,
+                                                                                            "Async Capable": false,
+                                                                                            "Relation Name": "title_basics",
+                                                                                            "Schema": "public",
+                                                                                            "Alias": "tb",
+                                                                                            "Startup Cost": 0.00,
+                                                                                            "Total Cost": 227616.31,
+                                                                                            "Plan Rows": 296956,
+                                                                                            "Plan Width": 10,
+                                                                                            "Output": [
+                                                                                                "tb.tconst"
+                                                                                            ],
+                                                                                            "Filter": "(tb.titletype = 'movie'::text)"
+                                                                                        }
+                                                                                    ]
+                                                                                }
+                                                                            ]
+                                                                        },
+                                                                        {
+                                                                            "Node Type": "Index Scan",
+                                                                            "Parent Relationship": "Inner",
+                                                                            "Parallel Aware": false,
+                                                                            "Async Capable": false,
+                                                                            "Scan Direction": "Forward",
+                                                                            "Index Name": "title_crew_pkey",
+                                                                            "Relation Name": "title_crew",
+                                                                            "Schema": "public",
+                                                                            "Alias": "tc",
+                                                                            "Startup Cost": 0.56,
+                                                                            "Total Cost": 0.92,
+                                                                            "Plan Rows": 1,
+                                                                            "Plan Width": 23,
+                                                                            "Output": [
+                                                                                "tc.tconst",
+                                                                                "tc.directors",
+                                                                                "tc.writers"
+                                                                            ],
+                                                                            "Index Cond": "(tc.tconst = (tr.tconst)::text)"
+                                                                        }
+                                                                    ]
+                                                                },
+                                                                {
+                                                                    "Node Type": "Seq Scan",
+                                                                    "Parent Relationship": "Inner",
+                                                                    "Parallel Aware": false,
+                                                                    "Async Capable": false,
+                                                                    "Relation Name": "name_basics",
+                                                                    "Schema": "public",
+                                                                    "Alias": "nb",
+                                                                    "Startup Cost": 0.00,
+                                                                    "Total Cost": 294017.20,
+                                                                    "Plan Rows": 14276120,
+                                                                    "Plan Width": 24,
+                                                                    "Output": [
+                                                                        "nb.nconst",
+                                                                        "nb.primaryname",
+                                                                        "nb.birthyear",
+                                                                        "nb.deathyear",
+                                                                        "nb.primaryprofession",
+                                                                        "nb.knownfortitles"
+                                                                    ]
+                                                                }
+                                                            ]
+                                                        }
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "JIT": {
+            "Functions": 29,
+            "Options": {
+                "Inlining": true,
+                "Optimization": true,
+                "Expressions": true,
+                "Deforming": true
+            }
+        }
+    }
+]

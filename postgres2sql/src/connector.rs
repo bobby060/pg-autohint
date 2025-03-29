@@ -29,7 +29,7 @@ pub fn establish_connection(
 
 /// Convert a SQL query to a PlanWrapper struct
 ///
-///     Unwrap the PlanWrapper to get the root PlanNode
+/// Unwrap the PlanWrapper to get the root PlanNode
 ///
 /// # Arguments
 ///

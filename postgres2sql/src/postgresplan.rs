@@ -27,6 +27,10 @@ pub enum PlanNode {
     SeqScan(SeqScan),
     #[serde(rename = "Index Scan")]
     IndexScan(IndexScan),
+    #[serde(rename = "Values Scan")]
+    ValueScan(ValueScan),
+    #[serde(rename = "Subquery Scan")]
+    SubqueryScan(SubqueryScan),
     // joins
     Hash(Hash),
     #[serde(rename = "Hash Join")]
@@ -46,6 +50,16 @@ pub enum PlanNode {
     #[serde(rename = "Index Only Scan")]
     IndexOnlyScan(IndexOnlyScan),
     Memoize(Memoize),
+    #[serde(rename = "SetOp")]
+    SetOp(SetOp),
+    #[serde(rename = "LockRows")]
+    LockRows(LockRows),
+    #[serde(rename = "Result")]
+    ResultNode(ResultNode),
+    #[serde(rename = "Incremental Sort")]
+    IncrementalSort(IncrementalSort),
+    #[serde(rename = "WindowAgg")]
+    WindowAgg(WindowAgg),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -64,6 +78,17 @@ pub struct Aggregate {
     pub output: Option<Vec<String>>,
     #[serde(rename = "Group Key")]
     pub group_keys: Option<Vec<String>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WindowAgg {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Run Condition")]
+    pub run_condition: Option<String>,
 }
 // scans
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -116,6 +141,31 @@ pub struct IndexOnlyScan {
     #[serde(rename = "Index Cond")]
     pub index_cond: Option<String>,
 }
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ValueScan {
+    #[serde(rename = "Alias")]
+    pub alias: Option<String>,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SubqueryScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Alias")]
+    pub alias: Option<String>,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+
 // joins
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Hash {
@@ -201,6 +251,33 @@ pub struct Sort {
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct IncrementalSort {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Sort Key")]
+    pub sort_keys: Vec<String>,
+    #[serde(rename = "Presorted Key")]
+    pub presorted_keys: Vec<String>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Run Condition")]
+    pub run_condition: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SetOp {
+    #[serde(rename = "Strategy")]
+    pub strategy: String,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Command")]
+    pub command: Option<String>,
+}
 
 impl PlanNode {
     pub fn get_children(&self) -> Option<Vec<PlanNode>> {
@@ -220,6 +297,13 @@ impl PlanNode {
             PlanNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
             PlanNode::IndexOnlyScan(_) => None,
             PlanNode::Memoize(memoize) => memoize.children.clone(),
+            PlanNode::ValueScan(_) => None,
+            PlanNode::SubqueryScan(subquery_scan) => subquery_scan.children.clone(),
+            PlanNode::SetOp(set_op) => set_op.children.clone(),
+            PlanNode::LockRows(lock_rows) => lock_rows.children.clone(),
+            PlanNode::ResultNode(_) => None,
+            PlanNode::IncrementalSort(incremental_sort) => incremental_sort.children.clone(),
+            PlanNode::WindowAgg(window_agg) => window_agg.children.clone(),
         }
     }
 }
@@ -230,6 +314,8 @@ pub enum ScanNode {
     SeqScan(SeqScan),
     IndexScan(IndexScan),
     IndexOnlyScan(IndexOnlyScan),
+    ValueScan(ValueScan),
+    SubqueryScan(SubqueryScan),
 }
 
 impl ScanNode {
@@ -238,6 +324,8 @@ impl ScanNode {
             ScanNode::SeqScan(seq_scan) => seq_scan.alias.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.alias.clone(),
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.alias.clone(),
+            ScanNode::ValueScan(value_scan) => value_scan.alias.clone(),
+            ScanNode::SubqueryScan(subquery_scan) => subquery_scan.alias.clone(),
         }
     }
 
@@ -246,6 +334,8 @@ impl ScanNode {
             ScanNode::SeqScan(seq_scan) => seq_scan.filter.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.filter.clone(),
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.filter.clone(),
+            ScanNode::ValueScan(value_scan) => value_scan.filter.clone(),
+            ScanNode::SubqueryScan(subquery_scan) => subquery_scan.filter.clone(),
         }
     }
 
@@ -254,6 +344,9 @@ impl ScanNode {
             ScanNode::SeqScan(seq_scan) => seq_scan.relation_name.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.relation_name.clone(),
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.relation_name.clone(),
+            // ValueScan and SubqueryScan Node does not have a relation_name, use alias as a replacement
+            ScanNode::ValueScan(value_scan) => value_scan.alias.clone().unwrap_or_default(),
+            ScanNode::SubqueryScan(subquery_scan) => subquery_scan.alias.clone().unwrap_or_default(),
         }
     }
 
@@ -262,6 +355,8 @@ impl ScanNode {
             ScanNode::SeqScan(_) => None,
             ScanNode::IndexScan(index_scan) => Some(index_scan.index_name.clone()),
             ScanNode::IndexOnlyScan(index_only_scan) => Some(index_only_scan.index_name.clone()),
+            ScanNode::ValueScan(_) => None,
+            ScanNode::SubqueryScan(_) => None,
         }
     }
 
@@ -270,6 +365,8 @@ impl ScanNode {
             ScanNode::SeqScan(seq_scan) => seq_scan.output.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.output.clone(),
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.output.clone(),
+            ScanNode::ValueScan(value_scan) => value_scan.output.clone(),
+            ScanNode::SubqueryScan(subquery_scan) => subquery_scan.output.clone(),
         }
     }
 }
@@ -371,24 +468,33 @@ impl JoinNode {
 
 pub enum SetNode {
     Append(Append),
+    SetOp(SetOp),
 }
 
 impl SetNode {
     pub fn get_children(&self) -> Option<Vec<PlanNode>> {
         match self {
             SetNode::Append(append) => append.children.clone(),
+            SetNode::SetOp(set_op) => set_op.children.clone(),
         }
     }
 
     pub fn set_children(&mut self, children: Vec<PlanNode>) {
         match self {
             SetNode::Append(append) => append.children = Some(children),
+            SetNode::SetOp(set_op) => set_op.children = Some(children),
         }
     }
 
     pub fn get_operator(&self) -> SetOperator {
         match self {
             SetNode::Append(_) => SetOperator::Union,
+            SetNode::SetOp(set_op) => match set_op.command.as_deref() {
+                Some("Intersect") | Some("Intersect All") => SetOperator::Intersect,
+                Some("Except") | Some("Except All") => SetOperator::Except,
+                Some(command) => panic!("Unsupported SetOperator: {}", command),
+                _ => panic!("Missing command in SetOperator.")
+            }
         }
     }
 }
@@ -447,6 +553,34 @@ pub struct Memoize {
     pub cache_key: Option<String>,
     #[serde(rename = "Cache Mode")]
     pub cache_mode: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct LockRows {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ResultNode {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Subplan Name")]
+    pub subplan_name: Option<String>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "One-Time Filter")]
+    pub filter: Option<String>,
+}
+
+impl ResultNode {
+    pub fn get_filter(&self) -> Option<&String> {
+        self.filter.as_ref()
+    }
 }
 
 /// convert postgres plan json string to a tree of PlanNode's
