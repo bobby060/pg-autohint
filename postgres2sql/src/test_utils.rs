@@ -1,8 +1,5 @@
-use postgres::{types::Type, Client, NoTls};
-fn establish_connection(db_name: &str) -> Client {
-    let database_url = format!("postgres://postgres:postgres@localhost:5432/{}", db_name);
-    Client::connect(&database_url, NoTls).expect(&format!("Error connecting to {}", database_url))
-}
+use crate::connector::establish_connection;
+use postgres::types::Type;
 
 /// Test correctness of the new sql query by comparing the result with the original sql query
 ///
@@ -14,7 +11,7 @@ fn establish_connection(db_name: &str) -> Client {
 /// * `original_sql`: The original sql query
 /// * `new_sql`: The new sql query
 pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordered: bool) {
-    let mut conn = establish_connection(db_name);
+    let mut conn = establish_connection(db_name, "postgres", "postgres", "localhost", "5432");
 
     let result = conn.query(new_sql, &[]).unwrap();
     let expected = conn.query(original_sql, &[]).unwrap();
@@ -92,11 +89,6 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
     } else {
         assert_eq!(actual_rows.sort(), expected_rows.sort());
     }
-}
-
-#[test]
-fn test_establish_connection() {
-    let _conn = establish_connection("imdb");
 }
 
 #[test]

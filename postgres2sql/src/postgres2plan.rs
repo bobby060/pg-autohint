@@ -4,7 +4,7 @@ use serde::*;
 use sqlparser::ast::SetOperator;
 /// Wrapper for parsing the whole plan json
 #[derive(Debug, Serialize, Deserialize)]
-struct PlanWrapper {
+pub struct PlanWrapper {
     #[serde(rename = "Plan")]
     plan: PlanNode,
 }
