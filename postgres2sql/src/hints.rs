@@ -11,6 +11,16 @@ impl PgHintList {
     pub fn with_sql(self, sql: &str) -> String {
         format!("{} {}", self.to_string(), sql)
     }
+
+    pub fn add_hint(mut self, hint: PgHint) -> Self {
+        self.0.push(hint);
+        self
+    }
+
+    pub fn add_hint_list(mut self, hint_list: PgHintList) -> Self {
+        self.0.extend(hint_list.0);
+        self
+    }
 }
 
 impl fmt::Display for PgHintList {
