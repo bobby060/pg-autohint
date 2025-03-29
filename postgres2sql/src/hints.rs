@@ -67,7 +67,7 @@ pub enum PgHint {
     },
     // Can add more hints here, just be sure to implement fmt::Display for them
     JoinOrder {
-        join_order: String,
+        join_order: String, // Maybe make this a vec string or a tree or something
     },
     HashJoin {
         tables: String,
