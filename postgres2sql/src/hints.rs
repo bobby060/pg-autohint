@@ -12,14 +12,18 @@ impl PgHintList {
         format!("{} {}", self.to_string(), sql)
     }
 
-    pub fn add_hint(mut self, hint: PgHint) -> Self {
+    //// Add hint to hint list
+    //// Args:
+    //// - hint: hint to add
+    pub fn add_hint(mut self, hint: PgHint) {
         self.0.push(hint);
-        self
     }
 
-    pub fn add_hint_list(mut self, hint_list: PgHintList) -> Self {
+    //// Add hint list to hint list
+    //// Args:
+    //// - hint_list: hint list to add
+    pub fn add_hint_list(mut self, hint_list: PgHintList) {
         self.0.extend(hint_list.0);
-        self
     }
 }
 
