@@ -1,4 +1,5 @@
 pub mod connector;
+pub mod hints;
 pub mod plan2ast;
 pub mod postgres2plan;
 pub mod postgres2sql;
