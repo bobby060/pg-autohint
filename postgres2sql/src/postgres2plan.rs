@@ -37,6 +37,7 @@ pub enum PlanNode {
     NestedLoopJoin(NestedLoopJoin),
     #[serde(rename = "Index Only Scan")]
     IndexOnlyScan(IndexOnlyScan),
+    Memoize(Memoize),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -208,6 +209,7 @@ impl PlanNode {
             PlanNode::GatherMerge(gather_merge) => gather_merge.children.clone(),
             PlanNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
             PlanNode::IndexOnlyScan(_) => None,
+            PlanNode::Memoize(memoize) => memoize.children.clone(),
         }
     }
 }
@@ -424,6 +426,21 @@ pub struct GatherMerge {
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+
+pub struct Memoize {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Cache Key")]
+    pub cache_key: Option<String>,
+    #[serde(rename = "Cache Mode")]
+    pub cache_mode: Option<String>,
 }
 
 /// convert postgres plan json string to a tree of PlanNode's

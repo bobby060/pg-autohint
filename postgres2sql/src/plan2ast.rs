@@ -61,6 +61,7 @@ impl Visit for PlanNode {
             PlanNode::GatherMerge(gather_merge) => gather_merge.visit_plan_node(),
             PlanNode::NestedLoopJoin(join) => JoinNode::NestedLoopJoin(join).visit_plan_node(),
             PlanNode::IndexOnlyScan(scan) => ScanNode::IndexOnlyScan(scan).visit_plan_node(),
+            PlanNode::Memoize(memoize) => memoize.visit_plan_node(),
             // _ => Err("Node not implemented".to_string()),
         }
     }
@@ -93,18 +94,23 @@ impl Visit for ScanNode {
         // tables
         let mut from: Vec<TableWithJoins> = vec![];
         // predicates
-        let mut selection = None;
-
-        // parse predicate
-        if let Some(filter) = self.get_filter() {
-            let filter: Expr = FromStr::from_str(&filter)?;
-            selection = Some(filter);
-        }
+        let mut selection = match self.get_filter() {
+            Some(filter) => Some(FromStr::from_str(&filter)?),
+            None => None,
+        };
 
         // parse table
         let table = build_base_table(&self.get_relation_name(), self.get_alias())?;
         from.push(table);
 
+        if let ScanNode::IndexOnlyScan(index_only_scan) = &self {
+            let index_cond: Expr = FromStr::from_str(index_only_scan.index_cond.as_ref().unwrap())?;
+            selection = Some(Expr::BinaryOp {
+                left: Box::new(selection.unwrap()),
+                right: Box::new(index_cond),
+                op: BinaryOperator::And,
+            });
+        }
         // build ast struct
         let select = Select {
             select_token: AttachedToken::empty(),
@@ -171,6 +177,12 @@ impl Visit for Hash {
     }
 }
 
+impl Visit for Memoize {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        self.children.unwrap()[0].to_owned().visit_plan_node()
+    }
+}
+
 impl Visit for JoinNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         let mut children_exprs = vec![];
@@ -217,11 +229,19 @@ impl Visit for JoinNode {
         };
 
         // Combine join predicate with selection
-        select.selection = Some(Expr::BinaryOp {
-            left: Box::new(select.selection.unwrap()),
-            right: Box::new(Expr::from_str(self.get_condition().unwrap().as_str())?),
-            op: BinaryOperator::And,
-        });
+
+        if let Some(condition) = self.get_condition() {
+            match select.selection {
+                Some(selection) => {
+                    select.selection = Some(Expr::BinaryOp {
+                        left: Box::new(selection),
+                        right: Box::new(Expr::from_str(condition.as_str())?),
+                        op: BinaryOperator::And,
+                    })
+                }
+                None => select.selection = Some(Expr::from_str(condition.as_str())?),
+            }
+        }
 
         // Combine having
         select.having = if let Some(having) = select.having {
