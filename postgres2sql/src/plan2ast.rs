@@ -10,6 +10,7 @@ use sqlparser::{ast::*, parser};
 ///
 ///
 ///
+#[deprecated(since = "0.1.0", note = "use PlanWrapper.visit_plan_node() instead")]
 pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     let expr = plan.visit_plan_node()?;
 
@@ -34,13 +35,33 @@ pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
     }
 }
 
-trait Visit {
+pub trait Visit {
     fn visit_plan_node(self) -> Result<SetExpr, String>;
 }
 
 impl Visit for PlanWrapper {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        self.plan.visit_plan_node()
+        let expr = self.plan.visit_plan_node()?;
+
+        // Placeholder for the AST
+        if let SetExpr::Query(query) = expr {
+            Ok(SetExpr::Query(query))
+        } else {
+            let query = Query {
+                with: None,
+                body: Box::new(expr),
+                order_by: None,
+                limit: None,
+                limit_by: vec![],
+                offset: None,
+                fetch: None,
+                locks: vec![],
+                for_clause: None,
+                settings: None,
+                format_clause: None,
+            };
+            Ok(SetExpr::Query(Box::new(query)))
+        }
     }
 }
 
@@ -54,7 +75,7 @@ impl Visit for PlanNode {
             PlanNode::MergeJoin(join) => JoinNode::MergeJoin(join).visit_plan_node(),
             PlanNode::Limit(limit) => limit.visit_plan_node(),
             PlanNode::Sort(sort) => sort.visit_plan_node(),
-            PlanNode::Unique(unique) => SetNode::Unique(unique).visit_plan_node(),
+            PlanNode::Unique(unique) => unique.visit_plan_node(),
             PlanNode::Append(append) => SetNode::Append(append).visit_plan_node(),
             PlanNode::Gather(gather) => gather.visit_plan_node(),
             PlanNode::Aggregate(agg) => agg.visit_plan_node(),
@@ -71,21 +92,53 @@ impl Visit for Aggregate {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         // Ignore partial aggregates, since they are duplicates of the final aggregates
 
+        fn aggregate_child(
+            child: SetExpr,
+            output: String,
+            group_keys: Option<Vec<String>>,
+        ) -> Result<SetExpr, String> {
+            match &child {
+                SetExpr::Select(select) => {
+                    let mut select = select.to_owned();
+                    select.projection = vec![SelectItem::UnnamedExpr(
+                        Expr::from_str(output.as_str()).unwrap(),
+                    )];
+
+                    if let Some(group_keys) = group_keys {
+                        select.group_by = GroupByExpr::Expressions(
+                            group_keys
+                                .iter()
+                                .map(|key| Expr::from_str(key.as_str()).unwrap())
+                                .collect(),
+                            vec![],
+                        );
+                    }
+                    Ok(SetExpr::Select(select))
+                }
+                // Really don't know how to handle an aggergate on a set yet, but in the union_all case, we ignore
+                // Maybe convert to a select from a subquery?
+                SetExpr::SetOperation { .. } => Ok(child),
+                SetExpr::Query(query) => {
+                    let mut query = query.to_owned();
+                    query.body =
+                        Box::new(aggregate_child(*query.body.to_owned(), output, group_keys)?);
+                    Ok(SetExpr::Query(query))
+                }
+
+                _ => Err("Expected a select or setup statement".to_string()),
+            }
+        }
+
         if self.partial_mode == "Partial" {
             return Ok(self.children.unwrap()[0].to_owned().visit_plan_node()?);
         }
         let children = self.children.unwrap()[0].to_owned().visit_plan_node()?;
 
-        match children {
-            SetExpr::Select(select) => {
-                let mut select = select.to_owned();
-                select.projection = vec![SelectItem::UnnamedExpr(
-                    Expr::from_str(self.output.unwrap()[0].as_str()).unwrap(),
-                )];
-                Ok(SetExpr::Select(select))
-            }
-            _ => Err("Expected a select statement".to_string()),
-        }
+        aggregate_child(
+            children,
+            self.output.unwrap()[0].clone(),
+            self.group_keys.clone(),
+        )
     }
 }
 
@@ -265,11 +318,12 @@ impl Visit for JoinNode {
 // NOTE: the Output field for a sorted plan includes the sort key, even if not part of original query output
 impl Visit for Sort {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        let mut order_by_items = vec![];
-        for key in self.sort_keys.iter() {
-            let expr = parse_expr(key).unwrap();
-            order_by_items.push(OrderByExpr {
-                expr: expr,
+        // Convert text order by keys to OrderByExpr
+        let order_by_items: Vec<OrderByExpr> = self
+            .sort_keys
+            .iter()
+            .map(|key| OrderByExpr {
+                expr: parse_expr(key).unwrap(),
                 options: OrderByOptions {
                     asc: match key.ends_with("DESC") {
                         true => Some(false),
@@ -278,8 +332,9 @@ impl Visit for Sort {
                     nulls_first: None,
                 },
                 with_fill: None,
-            });
-        }
+            })
+            .collect();
+
         let order_by = OrderBy {
             kind: OrderByKind::Expressions(order_by_items),
             interpolate: None,
@@ -287,12 +342,14 @@ impl Visit for Sort {
 
         let child_expr = self.children.unwrap()[0].clone().visit_plan_node()?;
 
+        // If already a query, just add order by
         if let SetExpr::Query(query) = child_expr {
             let mut query = query.to_owned();
             query.order_by = Some(order_by);
             return Ok(SetExpr::Query(query));
         }
 
+        // Otherwise wrap in a query
         let query = Query {
             with: None,
             body: Box::new(child_expr),
@@ -313,33 +370,77 @@ impl Visit for Sort {
 
 impl Visit for SetNode {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
-        Err("SetNode not implemented".to_string())
+        // Recursive helper for building set operations, lets you have more than two children
+        fn recursive_set_op_builder(
+            children: Vec<SetExpr>,
+            op: SetOperator,
+            quant: SetQuantifier,
+        ) -> Result<SetExpr, String> {
+            Ok(SetExpr::SetOperation {
+                op: op,
+                set_quantifier: quant,
+                left: Box::new(children[0].clone()),
+                right: {
+                    if children.len() == 2 {
+                        Box::new(children[1].clone())
+                    } else {
+                        Box::new(recursive_set_op_builder(children[1..].to_vec(), op, quant)?)
+                    }
+                },
+            })
+        }
 
-        // let children = self.get_children();
+        let children_exprs = self
+            .get_children()
+            .unwrap()
+            .iter()
+            .map(|child| child.to_owned().visit_plan_node().unwrap())
+            .collect();
 
-        // let mut append_with_less_children = self.clone();
-        // if let Some(children) = children {
-        //     let set_expr = SetExpr::SetOperation {
-        //         op: self.get_operator(),
+        Ok(recursive_set_op_builder(
+            children_exprs,
+            self.get_operator(),
+            SetQuantifier::None,
+        )?)
+    }
+}
 
-        //         // TODO: Do we need to have different quantifiers for Union/Intersect/Except?
-        //         set_quantifier: SetQuantifier::Distinct,
-        //         left: Box::new(children[0].clone().visit_plan_node()?),
-        //         // TODO: add test cases that have more than 2 children for Union/Intersect
-        //         // TODO: add test cases for other set operations (Except)
-        //         // Make the right, but if more than 2 children, make the right the append with the rest of the children
-        //         right: Box::new(if children.len() == 2 {
-        //             children[1].clone().visit_plan_node()?
-        //         } else {
-        //             append_with_less_children.set_children(children[1..].to_vec());
-        //             append_with_less_children.visit_plan_node()?
-        //         }),
-        //     };
+impl Visit for Unique {
+    fn visit_plan_node(self) -> Result<SetExpr, String> {
+        /// make the child set operation distinct
+        /// A Query needs this performed on its own setop
+        fn make_distinct(child: SetExpr) -> Result<SetExpr, String> {
+            match child {
+                SetExpr::Select(select) => {
+                    let mut select = select.to_owned();
+                    select.distinct = Some(Distinct::Distinct);
+                    Ok(SetExpr::Select(select))
+                }
+                SetExpr::Query(query) => {
+                    let mut query = query.to_owned();
+                    query.body = Box::new(make_distinct(*query.body.to_owned())?);
+                    Ok(SetExpr::Query(query))
+                }
+                SetExpr::SetOperation {
+                    op,
+                    set_quantifier: _,
+                    left,
+                    right,
+                } => {
+                    let set_operation = SetExpr::SetOperation {
+                        op: op.to_owned(),
+                        set_quantifier: SetQuantifier::Distinct,
+                        left: left.to_owned(),
+                        right: right.to_owned(),
+                    };
+                    Ok(set_operation)
+                }
+                _ => Err("Not supported!".to_string()),
+            }
+        }
+        let child = self.children.unwrap()[0].to_owned().visit_plan_node()?;
 
-        //     Ok(set_expr)
-        // } else {
-        //     Err("No children".to_string())
-        // }
+        make_distinct(child)
     }
 }
 
@@ -370,13 +471,10 @@ impl Visit for GatherMerge {
 }
 
 fn parse_projections(output: Vec<String>) -> Result<Vec<SelectItem>, String> {
-    let mut projection = vec![];
-    for x in output.iter() {
-        let expr = parse_expr(x).map_err(|e| e.to_string())?;
-        let select_item = SelectItem::UnnamedExpr(expr);
-        projection.push(select_item);
-    }
-    Ok(projection)
+    Ok(output
+        .iter()
+        .map(|x| SelectItem::UnnamedExpr(parse_expr(x).map_err(|e| e.to_string()).unwrap()))
+        .collect())
 }
 
 /// Build a base table with no joins

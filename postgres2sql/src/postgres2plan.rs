@@ -54,6 +54,8 @@ pub struct Aggregate {
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
+    #[serde(rename = "Group Key")]
+    pub group_keys: Option<Vec<String>>,
 }
 // scans
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -361,28 +363,24 @@ impl JoinNode {
 
 pub enum SetNode {
     Append(Append),
-    Unique(Unique),
 }
 
 impl SetNode {
     pub fn get_children(&self) -> Option<Vec<PlanNode>> {
         match self {
             SetNode::Append(append) => append.children.clone(),
-            SetNode::Unique(unique) => unique.children.clone(),
         }
     }
 
     pub fn set_children(&mut self, children: Vec<PlanNode>) {
         match self {
             SetNode::Append(append) => append.children = Some(children),
-            SetNode::Unique(unique) => unique.children = Some(children),
         }
     }
 
     pub fn get_operator(&self) -> SetOperator {
         match self {
             SetNode::Append(_) => SetOperator::Union,
-            SetNode::Unique(_) => SetOperator::Intersect,
         }
     }
 }

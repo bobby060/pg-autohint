@@ -2,7 +2,7 @@ use std::fmt;
 
 use crate::{
     optimize::{optimize_access_method, optimize_join_method},
-    postgres2plan::{HashJoin, JoinNode, PlanNode, ScanNode},
+    postgres2plan::{JoinNode, PlanNode, ScanNode},
 };
 
 pub struct PgHintList(Vec<PgHint>);

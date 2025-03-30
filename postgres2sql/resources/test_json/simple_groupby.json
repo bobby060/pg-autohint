@@ -1,0 +1,131 @@
+[
+    {
+        "Plan": {
+            "Node Type": "Limit",
+            "Parallel Aware": false,
+            "Async Capable": false,
+            "Startup Cost": 240883.37,
+            "Total Cost": 240885.90,
+            "Plan Rows": 10,
+            "Plan Width": 20,
+            "Output": [
+                "genres",
+                "(count(*))"
+            ],
+            "Plans": [
+                {
+                    "Node Type": "Aggregate",
+                    "Strategy": "Sorted",
+                    "Partial Mode": "Finalize",
+                    "Parent Relationship": "Outer",
+                    "Parallel Aware": false,
+                    "Async Capable": false,
+                    "Startup Cost": 240883.37,
+                    "Total Cost": 241098.46,
+                    "Plan Rows": 849,
+                    "Plan Width": 20,
+                    "Output": [
+                        "genres",
+                        "count(*)"
+                    ],
+                    "Group Key": [
+                        "title_basics.genres"
+                    ],
+                    "Plans": [
+                        {
+                            "Node Type": "Gather Merge",
+                            "Parent Relationship": "Outer",
+                            "Parallel Aware": false,
+                            "Async Capable": false,
+                            "Startup Cost": 240883.37,
+                            "Total Cost": 241081.48,
+                            "Plan Rows": 1698,
+                            "Plan Width": 20,
+                            "Output": [
+                                "genres",
+                                "(PARTIAL count(*))"
+                            ],
+                            "Workers Planned": 2,
+                            "Plans": [
+                                {
+                                    "Node Type": "Sort",
+                                    "Parent Relationship": "Outer",
+                                    "Parallel Aware": false,
+                                    "Async Capable": false,
+                                    "Startup Cost": 239883.35,
+                                    "Total Cost": 239885.47,
+                                    "Plan Rows": 849,
+                                    "Plan Width": 20,
+                                    "Output": [
+                                        "genres",
+                                        "(PARTIAL count(*))"
+                                    ],
+                                    "Sort Key": [
+                                        "title_basics.genres"
+                                    ],
+                                    "Plans": [
+                                        {
+                                            "Node Type": "Aggregate",
+                                            "Strategy": "Hashed",
+                                            "Partial Mode": "Partial",
+                                            "Parent Relationship": "Outer",
+                                            "Parallel Aware": false,
+                                            "Async Capable": false,
+                                            "Startup Cost": 239833.55,
+                                            "Total Cost": 239842.04,
+                                            "Plan Rows": 849,
+                                            "Plan Width": 20,
+                                            "Output": [
+                                                "genres",
+                                                "PARTIAL count(*)"
+                                            ],
+                                            "Group Key": [
+                                                "title_basics.genres"
+                                            ],
+                                            "Planned Partitions": 0,
+                                            "Plans": [
+                                                {
+                                                    "Node Type": "Seq Scan",
+                                                    "Parent Relationship": "Outer",
+                                                    "Parallel Aware": true,
+                                                    "Async Capable": false,
+                                                    "Relation Name": "title_basics",
+                                                    "Schema": "public",
+                                                    "Alias": "title_basics",
+                                                    "Startup Cost": 0.00,
+                                                    "Total Cost": 215771.70,
+                                                    "Plan Rows": 4812370,
+                                                    "Plan Width": 12,
+                                                    "Output": [
+                                                        "tconst",
+                                                        "titletype",
+                                                        "primarytitle",
+                                                        "originaltitle",
+                                                        "isadult",
+                                                        "startyear",
+                                                        "endyear",
+                                                        "runtimeminutes",
+                                                        "genres"
+                                                    ]
+                                                }
+                                            ]
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        },
+        "JIT": {
+            "Functions": 7,
+            "Options": {
+                "Inlining": false,
+                "Optimization": false,
+                "Expressions": true,
+                "Deforming": true
+            }
+        }
+    }
+]

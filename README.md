@@ -38,6 +38,12 @@ Then copy the imdb_postgres_setup.sh to that user and run as postgres. I did thi
 
 Now you can access imdb with `psql -d imdb` from your normal user
 
+Run all tests
+```cargo test```
+
+Run specific test
+```cargo test q10 -- --nocapture```
+
 ## System design
 1. Parse Postgres JSON into tree
 2. Convert tree into SQL AST

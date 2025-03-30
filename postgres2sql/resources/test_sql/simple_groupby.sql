@@ -1,0 +1,1 @@
+SELECT genres, count(*) FROM title_basics GROUP BY genres limit 10;
