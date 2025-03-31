@@ -1,4 +1,6 @@
 use crate::connector::establish_connection;
+use crate::optimize::Optimizer;
+use crate::rules::Rule;
 use postgres::types::Type;
 
 /// Test correctness of the new sql query by comparing the result with the original sql query
@@ -91,12 +93,17 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
     }
 }
 
-#[test]
-fn test_correctness_test() {
+pub fn rule_test(rule: Box<dyn Rule>, sql: &str) {
+    let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+
+    let optimizer = Optimizer { rules: vec![rule] };
+
+    let new_sql = optimizer.optimize(sql, &mut conn);
+
     correctness_test(
         "imdb",
-        "SELECT * FROM name_basics limit 10",
-        "SELECT * FROM name_basics limit 10",
-        false,
+        sql,
+        new_sql.unwrap().as_str(),
+        sql.contains("ORDER BY"),
     );
 }
