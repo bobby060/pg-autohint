@@ -1,13 +1,26 @@
 use crate::hints::PgHint;
+use crate::rules::*;
 
-/// optimize by replacing the input join method with another
-pub fn optimize_join_method(hint: PgHint) -> PgHint {
-    hint
-    // TODO: implement optimize logic
+struct Optimizer {
+    rules: Vec<Box<dyn Rule>>,
 }
 
-/// optimize by replacing the input access method with another
-pub fn optimize_access_method(hint: PgHint) -> PgHint {
-    hint
-    // TODO: implement optimize logic
+impl Optimizer {
+    pub fn new() -> Self {
+        Optimizer { rules: vec![] }
+    }
+
+    pub fn optimize(&self, sql: &str, conn: &mut Client) -> Result<String, String> {
+        let plan = query_to_plan(sql, conn);
+
+        let hints = self.optimize_plan(plan);
+
+        Ok(hints.with_sql(sql))
+    }
+
+    fn optimize_plan(&self, plan: PlanWrapper) -> PgHintList {
+        todo!("Implement optimize logic")
+
+        // Apply each rule to plan wrapper
+    }
 }

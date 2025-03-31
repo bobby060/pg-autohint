@@ -4,9 +4,17 @@ use serde::*;
 use sqlparser::ast::SetOperator;
 /// Wrapper for parsing the whole plan json
 #[derive(Debug, Serialize, Deserialize)]
-pub struct PlanWrapper {
+pub struct PlanRoot {
     #[serde(rename = "Plan")]
     pub plan: PlanNode,
+    #[serde(rename = "Execution Time")]
+    pub execution_time: Option<f64>,
+}
+
+impl PlanRoot {
+    pub fn is_analyzed(&self) -> bool {
+        self.execution_time.is_some()
+    }
 }
 
 /// Plan node type enum for `serde` json parsing
@@ -452,7 +460,7 @@ pub fn postgres2plan(input_json: &str) -> Result<PlanNode, serde_json::Error> {
 
 /// parse the input json into a struct representing postgres plan tree
 fn parse_json(input_json: &str) -> Result<PlanNode, serde_json::Error> {
-    let plan_wrappers: Vec<PlanWrapper> = serde_json::from_str(input_json)?;
+    let plan_wrappers: Vec<PlanRoot> = serde_json::from_str(input_json)?;
     let plan = plan_wrappers.first().unwrap().plan.clone();
     Ok(plan)
 }

@@ -1,4 +1,4 @@
-use crate::postgres2plan::PlanWrapper;
+use crate::postgresplan::PlanRoot;
 use postgres::types::Json;
 use postgres::{Client, NoTls};
 
@@ -36,11 +36,11 @@ pub fn establish_connection(
 /// * `query`: The query to convert to a SQL query to serialized postgres plan
 ///
 /// # Returns Vec<PlanWrapper>
-pub fn query_to_plan(query: &str, conn: &mut Client) -> Vec<PlanWrapper> {
+pub fn query_to_plan(query: &str, conn: &mut Client) -> Vec<PlanRoot> {
     let prefix = "EXPLAIN (FORMAT JSON, VERBOSE TRUE) ";
     let result = conn.query(&(prefix.to_string() + query), &[]).unwrap();
 
-    let value: Option<Json<Vec<PlanWrapper>>> = result.get(0).unwrap().get(0);
+    let value: Option<Json<Vec<PlanRoot>>> = result.get(0).unwrap().get(0);
 
     value.unwrap().0
 }

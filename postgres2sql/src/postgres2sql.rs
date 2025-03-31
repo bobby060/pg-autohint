@@ -1,5 +1,5 @@
 /// External-facing API for postgres2sql
-use crate::{plan2ast::Visit, postgres2plan};
+use crate::{plan2ast::Visit, postgresplan};
 /// Provides api for converting JSON string (and json path) to SQL
 
 /// Steps:
@@ -7,7 +7,7 @@ use crate::{plan2ast::Visit, postgres2plan};
 /// 2. Convert the Postgres plan to a datafusion AST
 /// 3. Add hints
 pub fn postgres2sql(json: String) -> Result<String, String> {
-    let plan = postgres2plan::postgres2plan(&json).map_err(|e| e.to_string())?;
+    let plan = postgresplan::postgres2plan(&json).map_err(|e| e.to_string())?;
 
     let ast = plan.visit_plan_node()?;
 

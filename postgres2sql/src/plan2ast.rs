@@ -1,6 +1,6 @@
 use std::vec;
 
-use crate::postgres2plan::*;
+use crate::postgresplan::*;
 use sqlparser::ast::helpers::attached_token::AttachedToken;
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
@@ -39,7 +39,7 @@ pub trait Visit {
     fn visit_plan_node(self) -> Result<SetExpr, String>;
 }
 
-impl Visit for PlanWrapper {
+impl Visit for PlanRoot {
     fn visit_plan_node(self) -> Result<SetExpr, String> {
         let expr = self.plan.visit_plan_node()?;
 
