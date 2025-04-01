@@ -1,12 +1,13 @@
 use std::fmt;
 
+#[derive(Clone)]
 pub struct PgHintList(Vec<PgHint>);
 
 impl PgHintList {
     pub fn new() -> Self {
         PgHintList(vec![])
     }
-    ////Concat hint list with sql string
+    //// Concat hint list with sql string
     //// Args:
     //// - sql: sql string to concat with self
     //// Returns:
@@ -28,6 +29,13 @@ impl PgHintList {
     pub fn add_hint_list(&mut self, hint_list: PgHintList) {
         self.0.extend(hint_list.0);
     }
+
+    //// Concat hint list with sql string
+    //// Returns:
+    //// - length of the hint list
+    pub fn size(&self) -> usize {
+        self.0.len()
+    }
 }
 
 impl fmt::Display for PgHintList {
@@ -43,6 +51,8 @@ impl fmt::Display for PgHintList {
         )
     }
 }
+
+#[derive(Clone)]
 pub enum PgHint {
     SeqScan {
         table: String,
@@ -109,6 +119,5 @@ impl fmt::Display for PgHint {
         }
     }
 }
-
 
 // TODO: Add tests

@@ -4,6 +4,7 @@ pub mod optimize;
 pub mod plan2ast;
 pub mod postgres2sql;
 pub mod postgresplan;
+pub mod rule;
 pub mod rules;
 
 #[cfg(test)]

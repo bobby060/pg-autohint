@@ -187,6 +187,10 @@ pub struct HashJoin {
     pub inner_unique: bool,
     #[serde(rename = "Hash Cond")]
     pub hash_cond: String,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Join Filter")]
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
@@ -204,6 +208,10 @@ pub struct MergeJoin {
     pub inner_unique: bool,
     #[serde(rename = "Merge Cond")]
     pub merge_cond: String,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Join Filter")]
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
@@ -220,6 +228,10 @@ pub struct NestedLoopJoin {
     pub join_type: String,
     #[serde(rename = "Inner Unique")]
     pub inner_unique: bool,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Join Filter")]
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
@@ -346,7 +358,9 @@ impl ScanNode {
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.relation_name.clone(),
             // ValueScan and SubqueryScan Node does not have a relation_name, use alias as a replacement
             ScanNode::ValueScan(value_scan) => value_scan.alias.clone().unwrap_or_default(),
-            ScanNode::SubqueryScan(subquery_scan) => subquery_scan.alias.clone().unwrap_or_default(),
+            ScanNode::SubqueryScan(subquery_scan) => {
+                subquery_scan.alias.clone().unwrap_or_default()
+            }
         }
     }
 
@@ -493,8 +507,8 @@ impl SetNode {
                 Some("Intersect") | Some("Intersect All") => SetOperator::Intersect,
                 Some("Except") | Some("Except All") => SetOperator::Except,
                 Some(command) => panic!("Unsupported SetOperator: {}", command),
-                _ => panic!("Missing command in SetOperator.")
-            }
+                _ => panic!("Missing command in SetOperator."),
+            },
         }
     }
 }
@@ -592,11 +606,21 @@ pub fn postgres2plan(input_json: &str) -> Result<PlanNode, serde_json::Error> {
     parse_json(input_json)
 }
 
+pub fn postgres2planroot(input_json: &str) -> Result<PlanRoot, serde_json::Error> {
+    parse_json_to_root(input_json)
+}
+
 /// parse the input json into a struct representing postgres plan tree
 fn parse_json(input_json: &str) -> Result<PlanNode, serde_json::Error> {
-    let plan_wrappers: Vec<PlanRoot> = serde_json::from_str(input_json)?;
-    let plan = plan_wrappers.first().unwrap().plan.clone();
+    let plan_roots: Vec<PlanRoot> = serde_json::from_str(input_json)?;
+    let plan = plan_roots.first().unwrap().plan.clone();
     Ok(plan)
+}
+
+/// parse the input json into a struct representing postgres plan tree
+fn parse_json_to_root(input_json: &str) -> Result<PlanRoot, serde_json::Error> {
+    let plan_roots: Vec<PlanRoot> = serde_json::from_str(input_json)?;
+    Ok(plan_roots.first().unwrap().clone())
 }
 
 #[cfg(test)]
