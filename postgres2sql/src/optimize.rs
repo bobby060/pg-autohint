@@ -17,7 +17,7 @@ impl Optimizer {
     /// optimize a given sql query by running EXPLAIN / EXPLAIN ANALYZE with the provided connection
     /// returns an optimized SQL with hints
     pub fn optimize(&mut self, sql: &str, conn: &mut Client) -> Result<String, String> {
-        let plan = query_to_plan(sql, conn, false);
+        let plan = query_to_plan(sql, conn, true);
         let plan_root = plan[0].clone();
         let hints: PgHintList = self.optimize_plan(plan_root);
 
