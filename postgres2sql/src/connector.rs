@@ -39,9 +39,11 @@ pub fn establish_connection(
 pub fn query_to_plan(query: &str, conn: &mut Client, analyze: bool) -> Vec<PlanRoot> {
     let prefix = format!(
         "EXPLAIN (FORMAT JSON, VERBOSE TRUE {})",
-        if analyze { ", ANALYZE" } else { "" }
+        if analyze { ", ANALYZE TRUE" } else { "" }
     );
-    let result = conn.query(&prefix, &[]).unwrap();
+
+    let query = format!("{} {}", prefix, query);
+    let result = conn.query(&query, &[]).unwrap();
 
     let value: Option<Json<Vec<PlanRoot>>> = result.get(0).unwrap().get(0);
 
