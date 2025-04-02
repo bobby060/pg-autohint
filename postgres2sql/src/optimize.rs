@@ -17,7 +17,7 @@ impl Optimizer {
     /// optimize a given sql query by running EXPLAIN / EXPLAIN ANALYZE with the provided connection
     /// returns an optimized SQL with hints
     pub fn optimize(&mut self, sql: &str, conn: &mut Client) -> Result<String, String> {
-        let plan = query_to_plan(sql, conn);
+        let plan = query_to_plan(sql, conn, true);
         let plan_root = plan[0].clone();
         let hints: PgHintList = self.optimize_plan(plan_root);
 
@@ -42,8 +42,10 @@ impl Optimizer {
             match rule.apply(plan.plan.clone()) {
                 Some(hints) => {
                     pg_hint_list.add_hint_list(hints);
-                },
-                None => {continue;}
+                }
+                None => {
+                    continue;
+                }
             }
         }
         pg_hint_list
@@ -67,7 +69,10 @@ mod test_optimizer {
         let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
         let plan_node = postgres2planroot(&input).unwrap();
 
-        let mut optimizer= Optimizer::new();
+        let original_query = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
+            .expect("Failed to read input file");
+
+        let mut optimizer = Optimizer::new();
         optimizer.add_rule(Box::new(nlj_to_hashjoin_rule));
 
         let hint_list = optimizer.optimize_plan(plan_node);

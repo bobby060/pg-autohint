@@ -36,21 +36,26 @@ pub fn establish_connection(
 /// * `query`: The query to convert to a SQL query to serialized postgres plan
 ///
 /// # Returns Vec<PlanWrapper>
-pub fn query_to_plan(query: &str, conn: &mut Client) -> Vec<PlanRoot> {
-    let prefix = "EXPLAIN (FORMAT JSON, VERBOSE TRUE) ";
-    let result = conn.query(&(prefix.to_string() + query), &[]).unwrap();
+pub fn query_to_plan(query: &str, conn: &mut Client, analyze: bool) -> Vec<PlanRoot> {
+    let prefix = format!(
+        "EXPLAIN (FORMAT JSON, VERBOSE TRUE {})",
+        if analyze { ", ANALYZE TRUE" } else { "" }
+    );
+
+    let query = format!("{} {}", prefix, query);
+    let result = conn.query(&query, &[]).unwrap();
 
     let value: Option<Json<Vec<PlanRoot>>> = result.get(0).unwrap().get(0);
 
     value.unwrap().0
 }
 
-pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str) {
+pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str, analyze: bool) {
     let sql = std::fs::read_to_string(sql_file).expect("Failed to read sql file");
 
     let mut client = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
-    let plan = query_to_plan(&sql, &mut client);
+    let plan = query_to_plan(&sql, &mut client, analyze);
 
     let json_out = std::fs::File::create(json_out_path).expect("Failed to create json out file");
 
@@ -72,7 +77,18 @@ mod test_connector {
 
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
-        let result = query_to_plan(sql, &mut conn);
+        let result = query_to_plan(sql, &mut conn, false);
+
+        println!("{:?}", result);
+    }
+
+    #[test]
+    fn query_to_plan_analyze_test() {
+        let sql = " SELECT * FROM name_basics limit 10";
+
+        let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+
+        let result = query_to_plan(sql, &mut conn, true);
 
         println!("{:?}", result);
     }

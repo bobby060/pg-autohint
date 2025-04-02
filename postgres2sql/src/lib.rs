@@ -12,12 +12,12 @@ pub mod test_utils;
 
 use connector::*;
 
-pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str) {
+pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str, analyze: bool) {
     let sql = std::fs::read_to_string(sql_file).expect("Failed to read sql file");
 
     let mut client = establish_connection("postgres", "postgres", "postgres", "localhost", "5432");
 
-    let plan = query_to_plan(&sql, &mut client);
+    let plan = query_to_plan(&sql, &mut client, analyze);
 
     let json_out = std::fs::File::create(json_out_path).expect("Failed to create json out file");
 
