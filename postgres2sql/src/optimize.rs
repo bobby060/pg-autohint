@@ -69,6 +69,9 @@ mod test_optimizer {
         let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
         let plan_node = postgres2planroot(&input).unwrap();
 
+        let original_query = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
+            .expect("Failed to read input file");
+
         let mut optimizer = Optimizer::new();
         optimizer.add_rule(Box::new(nlj_to_hashjoin_rule));
 
@@ -79,6 +82,6 @@ mod test_optimizer {
             "{}",
             format!("expected 2 hashjoin hints, got {}", hint_list.size())
         );
-        println!("{}", hint_list.with_sql(""));
+        println!("{}", hint_list.with_sql(&original_query));
     }
 }
