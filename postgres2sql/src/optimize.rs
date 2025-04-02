@@ -77,6 +77,7 @@ mod test_optimizer {
             "{}",
             format!("expected 2 hashjoin hints, got {}", hint_list.size())
         );
-        println!("{}", hint_list.with_sql(""));
+        let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql");
+        println!("{}", hint_list.with_sql(&sql.unwrap()));
     }
 }

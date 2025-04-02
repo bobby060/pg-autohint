@@ -116,7 +116,7 @@ impl NljToHashJoin {
     fn get_apply_join(&mut self, join_node: JoinNode) -> String {
         let left = self.apply_recursive(join_node.get_left().unwrap());
         let right = self.apply_recursive(join_node.get_right().unwrap());
-        let joins = format!("({} {})", left, right);
+        let joins = format!("{} {}", left, right);
 
         self.nlj_to_hash(join_node, joins.clone());
 

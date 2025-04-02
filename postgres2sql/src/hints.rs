@@ -47,7 +47,7 @@ impl fmt::Display for PgHintList {
                 .iter()
                 .map(|h| h.to_string())
                 .collect::<Vec<_>>()
-                .join(", ")
+                .join(" ")
         )
     }
 }
