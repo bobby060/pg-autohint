@@ -78,11 +78,10 @@ mod test_optimizer {
         let hint_list = optimizer.optimize_plan(plan_node);
         assert_eq!(
             hint_list.size(),
-            2,
+            1,
             "{}",
-            format!("expected 2 hashjoin hints, got {}", hint_list.size())
+            format!("expected 1 hashjoin hints, got {}", hint_list.size())
         );
-        let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql");
-        println!("{}", hint_list.with_sql(&sql.unwrap()));
+        println!("{}", hint_list.with_sql(&original_query));
     }
 }

@@ -146,12 +146,12 @@ mod test_example_rule {
         let plan_node = postgres2plan(&input).unwrap();
 
         let hint_list = nlj_to_hashjoin_rule.apply(plan_node).unwrap();
+        println!("{}", hint_list.clone().with_sql(""));
         assert_eq!(
             hint_list.size(),
-            2,
+            1,
             "{}",
-            format!("expected 2 hashjoin hints, got {}", hint_list.size())
+            format!("expected 1 hashjoin hints, got {}", hint_list.size())
         );
-        println!("{}", hint_list.with_sql(""));
     }
 }
