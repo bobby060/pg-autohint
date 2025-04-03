@@ -149,9 +149,9 @@ mod test_example_rule {
         println!("{}", hint_list.clone().with_sql(""));
         assert_eq!(
             hint_list.size(),
-            1,
+            2,
             "{}",
-            format!("expected 1 hashjoin hints, got {}", hint_list.size())
+            format!("expected 2 hashjoin hints, got {}", hint_list.size())
         );
     }
 }

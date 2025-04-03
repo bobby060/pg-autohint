@@ -61,6 +61,8 @@ mod test_optimizer {
     /// test NljToHashjoin rule on two NLJs
     #[test]
     fn test_nlj_to_hashjoin() {
+        // TODO: config this rule so it picks nlj for outer join but hash for inner join
+        // TODO: figure out how parallel works in EXPLAIN ANALYZE, it is showing 0 rows out of name_basics but there are should be 5 actually
         let nlj_to_hashjoin_rule = NljToHashJoin::new(1.2, 1000);
 
         // in this test, one NLJ has very large plan rows and one have actual rows larger than plan rows
@@ -78,9 +80,9 @@ mod test_optimizer {
         let hint_list = optimizer.optimize_plan(plan_node);
         assert_eq!(
             hint_list.size(),
-            1,
+            2,
             "{}",
-            format!("expected 1 hashjoin hints, got {}", hint_list.size())
+            format!("expected 2 hashjoin hints, got {}", hint_list.size())
         );
         println!("{}", hint_list.with_sql(&original_query));
     }
