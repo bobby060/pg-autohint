@@ -40,6 +40,8 @@ Alternative design considered: converting the physical plan to a Datafusion AST,
 ## Testing Plan
 >How should the component be tested?
 - Component level unit testing
+  - We use the IMDB dataset on Postgres for unit testing. We generate SQL queries with various clauses to cover all possible node types in the EXPLAIN statement. This is to test our correctness when converting the json-formatted query plan into the deserialized tree structure. Our system should successfully convert all types of SQL queries.
+  - We come up with SQL queries that Postgres would generate sub-optimal query plans on. We then use our converter to get deserialized plan and apply our transformation rules to test the performance of our optimization. Relevant metrics include 1) optimization time; 2) execution time improvements obtained from EXPLAIN ANALYZE statements before and after optimization.
 - End to end benchmarks (?)
 
 ## Trade-offs and Potential Problems
