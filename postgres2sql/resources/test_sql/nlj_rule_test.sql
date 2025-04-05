@@ -8,6 +8,8 @@ OR name_basics.primaryname='Shobha Kapoor'
 OR name_basics.primaryname='Snehasish Chakraborty')
 AND (name_basics.birthyear=1975 
 OR name_basics.birthyear IS NULL)
+AND name_basics.deathyear IS NULL
+AND name_basics.primaryprofession LIKE '%producer%'
 AND ((title_principals.category='producer'
 AND title_principals.job='producer')
 OR (title_principals.category='writer'
