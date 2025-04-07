@@ -17,11 +17,19 @@ The secondary purpose of this project is to conduct some preliminary work to ena
 
 2. **Extensible optimization rules.** Rules are be implemented under rules directory. It is convenient to add new rules by implementing the `Rule` trait. The system visits the plan tree in a bottom-up manner. If the query plan satisfies certain conditions, the system would add hints recursively. The system also supports two sets of rules: one set for `EXPLAIN` generated plan and another for `EXPLAIN ANALYZE` generated plan that contains actual costs.
 
-3. **Postgres Hints.** All hints are in `hints.rs`. We focus on three categories of hints to optimize sub-optimal Postgres query plans: 1) access methods; 2) join algorithms; 3) join ordering. All hints should conform to pg_hint_plan and current Postgres version.
+3. **Postgres Hints.** All hints are in `hints.rs`. We focus on three categories of hints to optimize sub-optimal Postgres query plans: 1) access methods; 2) join algorithms; 3) join ordering. Eventually, we hope to support all hints from pg_hint_plan and current Postgres version.
 
-4. **Tesing suite.** Test cases are under postgres2sql/resources, where original SQL queries are under test_sql and json-formatted query plans are under test_json. Currently, our test cases try to cover all node types. There are also test cases for rules like `nlj_rule_test.sql` and `nlj_rule_test.json`. The system automatically tests json parsing of all json files under test_json when running the `cargo test` command. Note that different versions of Postgres might generate different query plans for the same query, thus some of our optimization rules might have already been covered by a higher version.
 
-5. **plan2ast.** Our plan2ast converter is implemented in `plan2ast.rs` (incomplete). It takes in a `PlanRoot` and converts it into a Datafusion Abstract Syntax Tree, which can then be converted back to SQL.
+4. **plan2ast.** 
+
+Our plan2ast converter is implemented in `plan2ast.rs` (incomplete). It takes in a `PlanRoot` and converts it into a Datafusion Abstract Syntax Tree, which can then be converted back to SQL. Right now, we support the following operators:
+- Limit
+- Join
+- Distinct
+- Sort
+- Scan 
+- Filter (in Postgres plans, these are a component of parent nodes)
+
 
 ## Glossary (Optional)
 
@@ -32,17 +40,18 @@ The secondary purpose of this project is to conduct some preliminary work to ena
 
 TODO: put this into a graph
 - Connector: Connects to a postgres DB and retreives query plan (either with EXPLAIN or EXPLAIN ANALYZE) as JSON 
-- Postgres Plan: Serialize postgres plan to a struct representation of Postgres Plan `PlanNode`
-- Optimizer: Applies a list of `Rule` to a `PlanNode` and outputs the list of hints prepended to original sql
-- Rule: Extensible rules that visits the `PlanNode` tree and produce hints. Each rule implements the `Rule` trait and defines a `apply` method that takes a `PlanNode` and returns produced hints. Rules can be categorized into:
+- Postgres Plan (`postgresplan.rs`): Serialize postgres plan to a struct representation of Postgres Plan `PlanNode`
+- Optimizer (`optimize.rs`): Applies a list of `Rule` to a `PlanNode` and outputs the list of hints prepended to original sql
+- Rule (`rule.rs`, `rules/`): Extensible rules that visits the `PlanNode` tree and produce hints. Each rule implements the `Rule` trait and defines a `apply` method that takes a `PlanNode` and returns produced hints. Rules can be categorized into:
   - **TODO**: *Access Method Rules*: Modify scan nodes to suggest specific index or sequential scans.
   - *Join Algorithm Rules*: Suggest join strategies like nested loop, hash join, or merge join based on conditions.
   - **TODO**: *Join Order Rule*: Reorder joins to optimize query execution based on estimated costs.
-- Plan2ast: Converter that takes a `PlanRoot` as input and outputs the equivalent Datafustion Abstract Syntax Tree that converts to SQL query (incomplete and proof of concept)
+- Plan2ast ('`plan2ast.rs`): Converter that takes a `PlanRoot` as input and outputs the equivalent Datafusion Abstract Syntax Tree that converts to SQL query (incomplete and proof of concept)
     - Supports visiting and cleaning the tree of `PlanNode` to exclude nodes that are not needed for rel2sql convertsion, e.g. `Gather`, `Hash`
     - Supports visiting the following types of `PlanNode` and converting them to a corresponding datafusion ast nodes
     `Aggregate`, `SeqScan`, `IndexScan`, `IndexOnlyScan`, `ValueScan`, `SubqueryScan`, `HashJoin`, `MergeJoin`, `NestedLoopJoin`, `Sort`, `Limit`, `Unique`, `SetOp`.
     - Reuses datafusion ast functionality to convert the constructed ast into SQL query.
+- Postgres Connector (`connector.rs`): Uses postgres crate to expose a simple API to connect to a Postgres DB, convert a sql string to a PlanNode, and converte a SQL file to a JSON file of the corresponding plan.
 
 
 
@@ -50,27 +59,40 @@ TODO: put this into a graph
 ## Design Rationale
 >Explain the goals of this design and how the design achieves these goals. Present alternatives considered and document why they are not chosen.
 
-Current design: process plan and provide a list of hints that can be prepended to original sql. In this design, we parse and traverse the Postgres plan, applying the rules to produce hints, but do not have to convert that plan back into an AST.
+Current design: process plan and provide a list of hints that can be prepended to original sql. In this design, we parse and traverse the Postgres plan, applying the rules to produce hints, but do not have to convert that plan back into an AST. This works well for identifying errors in the Postgres plan that can be resolved through hints without modifying the underlying SQL.
 
 Alternative design considered: converting the physical plan to a Datafusion AST, then applying simple heuristic rules that not only provide a list of hints, but also allow manipulation of the underlying SQL. This would allow things like converting redundant filters (e.g. `SELECT X + 0 FROM A` to  `SELECT X FROM A`). However, we quickly identified that this conversion requires a signifant amount of work to convert correctly. While we able to relatively easily implement converting most SPJ queries, two specific outliers gave us problems: subqueries and correct output columns for ORDER BY. We have preserved our work on this and retained the testing infrstructure and may continue work in the future in addition to reusing the code on Optd adapters in the future.
 
 
 
 ## Testing Plan
->How should the component be tested?
-- Component level unit testing
+-  Unit Tests
   - We use the IMDB dataset on Postgres for unit testing. We generate SQL queries with various clauses to cover all possible node types in the EXPLAIN statement. This is to test our correctness when converting the json-formatted query plan into the deserialized tree structure. Our system should successfully convert all types of SQL queries.
+
   - We come up with SQL queries that Postgres would generate sub-optimal query plans on. We then use our converter to get deserialized plan and apply our transformation rules to test the performance of our optimization. Relevant metrics include 1) optimization time; 2) execution time improvements obtained from EXPLAIN ANALYZE statements before and after optimization.
-- End to end benchmarks (?)
+
+    
+    Test cases are under postgres2sql/resources, where original SQL queries are under test_sql and json-formatted query plans are under test_json. Currently, our test cases try to cover all node types. There are also test cases for rules like `nlj_rule_test.sql` and `nlj_rule_test.json`. The system automatically tests json parsing of all json files under test_json when running the `cargo test` command. Note that different versions of Postgres might generate different query plans for the same query, thus some of our optimization rules might be redundant on a higher version of Postgres. Some integration tests require the test imdb DB to be configured on the test machine (see `imdb_postgres_setup.sh`).
+    
+    We are in the process of adding unit tests for each module which do not require a Postgres database.
+
+- By the end of the semester, we hope to identify and run a benchmark that will test how much (if at all) our rules can improve performance.
+
+
+We will document code coverage with [cargo-llvm-cov](https://lib.rs/crates/cargo-llvm-cov). We are currently at X% coverage.
 
 ## Trade-offs and Potential Problems
 >Write down any conscious trade-off you made that can be problematic in the future, or any problems discovered during the design process that remain unaddressed (technical debts).
 - TODO: Talk about difficulty of creating rules to optimize. This is what we will focus on the most for the rest of the semester
 
+- Lack of completeness for plan2ast implementation. 
+
 
 ## Future Work
 >Write down future work to fix known problems or otherwise improve the component.
 - Add more rules
-- Continue implementation of plan2ast converter
+- Implement hints for row number corrections when estimates differ from actual execution.
+- Continue implementation of plan2ast converter to fully support subqueries, set operations, and edge cases.
 - Complete documentation to make this framework very accessible
+- Use the hint table to store hints for prepared queries rather than recomputing the prepared query
 
