@@ -31,18 +31,26 @@ The secondary purpose of this project is to conduct some preliminary work to ena
 >Explain the input and output of the component, describe interactions and breakdown the smaller components if any. Include diagrams if appropriate.
 
 TODO: put this into a graph
-- Connector: Connects to a postgres DB and retreives query plan (either with EXPLAIN or EXPLAIN ANALYZE) to a serialized `PlanNode` struct
-- Optimizer: Applies a list of rules to a `PlanNode` and outputs the list of hints prepended to original sql
-- Postgres Plan: Struct representation of a Postgres Plan
-- Plan2ast: Converter that takes a `PlanRoot` as input and outputs the equivalent Datafustion Abstract Syntax Tree (incomplete and proof of concept)
-    - TODO: Outline what works in plan2ast
+- Connector: Connects to a postgres DB and retreives query plan (either with EXPLAIN or EXPLAIN ANALYZE) as JSON 
+- Postgres Plan: Serialize postgres plan to a struct representation of Postgres Plan `PlanNode`
+- Optimizer: Applies a list of `Rule` to a `PlanNode` and outputs the list of hints prepended to original sql
+- Rule: Extensible rules that visits the `PlanNode` tree and produce hints. Each rule implements the `Rule` trait and defines a `apply` method that takes a `PlanNode` and returns produced hints. Rules can be categorized into:
+  - **TODO**: *Access Method Rules*: Modify scan nodes to suggest specific index or sequential scans.
+  - *Join Algorithm Rules*: Suggest join strategies like nested loop, hash join, or merge join based on conditions.
+  - **TODO**: *Join Order Rule*: Reorder joins to optimize query execution based on estimated costs.
+- Plan2ast: Converter that takes a `PlanRoot` as input and outputs the equivalent Datafustion Abstract Syntax Tree that converts to SQL query (incomplete and proof of concept)
+    - Supports visiting and cleaning the tree of `PlanNode` to exclude nodes that are not needed for rel2sql convertsion, e.g. `Gather`, `Hash`
+    - Supports visiting the following types of `PlanNode` and converting them to a corresponding datafusion ast nodes
+    `Aggregate`, `SeqScan`, `IndexScan`, `IndexOnlyScan`, `ValueScan`, `SubqueryScan`, `HashJoin`, `MergeJoin`, `NestedLoopJoin`, `Sort`, `Limit`, `Unique`, `SetOp`.
+    - Reuses datafusion ast functionality to convert the constructed ast into SQL query.
 
 
 
 
 ## Design Rationale
 >Explain the goals of this design and how the design achieves these goals. Present alternatives considered and document why they are not chosen.
-Current design: process plan and provide a list of hints that can be prepending to original sql. In this design, we traverse the Postgres plan, but do not have to convert that plan back into an AST.
+
+Current design: process plan and provide a list of hints that can be prepended to original sql. In this design, we parse and traverse the Postgres plan, applying the rules to produce hints, but do not have to convert that plan back into an AST.
 
 Alternative design considered: converting the physical plan to a Datafusion AST, then applying simple heuristic rules that not only provide a list of hints, but also allow manipulation of the underlying SQL. This would allow things like converting redundant filters (e.g. `SELECT X + 0 FROM A` to  `SELECT X FROM A`). However, we quickly identified that this conversion requires a signifant amount of work to convert correctly. While we able to relatively easily implement converting most SPJ queries, two specific outliers gave us problems: subqueries and correct output columns for ORDER BY. We have preserved our work on this and retained the testing infrstructure and may continue work in the future in addition to reusing the code on Optd adapters in the future.
 
@@ -57,7 +65,8 @@ Alternative design considered: converting the physical plan to a Datafusion AST,
 
 ## Trade-offs and Potential Problems
 >Write down any conscious trade-off you made that can be problematic in the future, or any problems discovered during the design process that remain unaddressed (technical debts).
-- Talk about difficulty of creating rules to optimize. This is what we will focus on the most for the rest of the semester
+- TODO: Talk about difficulty of creating rules to optimize. This is what we will focus on the most for the rest of the semester
+
 
 ## Future Work
 >Write down future work to fix known problems or otherwise improve the component.
