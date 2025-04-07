@@ -89,9 +89,13 @@ pub enum PgHint {
     IndexOnlyScan {
         table: String,
     },
-    // NestLoop {
-    //     tables: String
-    // },
+    NestLoop {
+        tables: String
+    },
+    CardCorrection {
+        tables: String,
+        card: i64
+    }
 }
 
 impl fmt::Display for PgHint {
@@ -113,9 +117,11 @@ impl fmt::Display for PgHint {
             PgHint::JoinOrder { join_order } => f.write_str(&format!("Leading({})", join_order)),
             PgHint::HashJoin { tables } => f.write_str(&format!("HashJoin({})", tables)),
             PgHint::MergeJoin { tables } => f.write_str(&format!("MergeJoin({})", tables)),
+            PgHint::NestLoop { tables } => f.write_str(&format!("NestLoop({})", tables)),
             PgHint::IndexOnlyScan { table } => f.write_str(&format!("IndexOnlyScan({})", table)),
             PgHint::ValueScan { table } => f.write_str(&format!("ValueScan({})", table)),
             PgHint::SubqueryScan { table } => f.write_str(&format!("SubqueryScan({})", table)),
+            PgHint::CardCorrection { tables, card } => f.write_str(&format!("Rows({} #{})", tables, card)),
         }
     }
 }

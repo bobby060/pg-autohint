@@ -49,6 +49,7 @@ psql -U postgres -d imdb -c "CREATE INDEX title_basics_pkey ON title_basics (tco
 psql -U postgres -d imdb -c "CREATE INDEX title_ratings_pkey ON title_ratings (tconst);"
 psql -U postgres -d imdb -c "CREATE INDEX title_crew_pkey ON title_crew (tconst);"
 psql -U postgres -d imdb -c "CREATE INDEX name_basics_pkey ON name_basics (nconst);"
+psql -U postgres -d imdb -c "CREATE INDEX num_votes_idx ON title_ratings (num_votes);"
 
 printf "Done! \n"
 

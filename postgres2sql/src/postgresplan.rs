@@ -101,6 +101,10 @@ pub struct SeqScan {
     pub alias: Option<String>,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
@@ -118,6 +122,10 @@ pub struct IndexScan {
     pub filter: Option<String>,
     #[serde(rename = "Scan Direction")]
     pub scan_direction: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
@@ -138,6 +146,10 @@ pub struct IndexOnlyScan {
     pub scan_direction: Option<String>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Index Cond")]
     pub index_cond: Option<String>,
 }
@@ -148,6 +160,10 @@ pub struct ValueScan {
     pub alias: Option<String>,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
@@ -162,6 +178,10 @@ pub struct SubqueryScan {
     pub filter: Option<String>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
 }
@@ -383,6 +403,16 @@ impl ScanNode {
             ScanNode::SubqueryScan(subquery_scan) => subquery_scan.output.clone(),
         }
     }
+
+    pub fn get_card(&self) -> Option<i64> {
+        match self {
+            ScanNode::SeqScan(seq_scan) => seq_scan.actual_rows,
+            ScanNode::IndexScan(index_scan) => index_scan.actual_rows,
+            ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.actual_rows,
+            ScanNode::ValueScan(value_scan) => value_scan.actual_rows,
+            ScanNode::SubqueryScan(subquery_scan) => subquery_scan.actual_rows,
+        }
+    }
 }
 
 // Group of all join operators
@@ -475,6 +505,14 @@ impl JoinNode {
             JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.output.clone(),
         }
     }
+
+    pub fn get_card(&self) -> Option<i64> {
+        match self {
+            JoinNode::HashJoin(hash_join) => hash_join.actual_rows.clone(),
+            JoinNode::MergeJoin(merge_join) => merge_join.actual_rows.clone(),
+            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.actual_rows.clone(),
+        }
+    }
 }
 
 // Group of all set operators
@@ -539,6 +577,8 @@ pub struct Gather {
     pub parent_relationship: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Workers Planned")]
+    pub num_workers: i64,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
