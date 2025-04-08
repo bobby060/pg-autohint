@@ -23,10 +23,13 @@ impl Rule for CardCorrection {
 
 impl CardCorrection {
     pub fn new(card_multiplier: f64) -> Self {
-        CardCorrection { card_multiplier: card_multiplier, pg_hint_list: PgHintList::new() }
+        CardCorrection {
+            card_multiplier: card_multiplier,
+            pg_hint_list: PgHintList::new(),
+        }
     }
 
-    // TODO: the actual cardinality of join is one in the `Gather` node above it. Parallel execution causes the 
+    // TODO: the actual cardinality of join is one in the `Gather` node above it. Parallel execution causes the
     // actual_rows in join nodes to be low
     // Ad hoc solution is to multiply card by self.card_multiplier that is multiplied by the number of workers launched
     // in Gather nodes
@@ -36,9 +39,12 @@ impl CardCorrection {
         let actual_rows = if actual_rows == 0 { 1 } else { actual_rows };
 
         let adjust_rows = (actual_rows as f64 * self.card_multiplier) as i64;
-        self.pg_hint_list.add_hint(PgHint::CardCorrection { tables: joins, card: adjust_rows });
+        self.pg_hint_list.add_hint(PgHint::CardCorrection {
+            tables: joins,
+            card: adjust_rows,
+        });
     }
-    
+
     fn apply_recursive(&mut self, plan: PlanNode) -> String {
         match plan {
             PlanNode::HashJoin(hash_join) => self.get_apply_join(JoinNode::HashJoin(hash_join)),
@@ -48,10 +54,14 @@ impl CardCorrection {
             }
             PlanNode::SeqScan(seq_scan) => self.get_scan(ScanNode::SeqScan(seq_scan)),
             PlanNode::IndexScan(index_scan) => self.get_scan(ScanNode::IndexScan(index_scan)),
-            PlanNode::IndexOnlyScan(index_only_scan) => self.get_scan(ScanNode::IndexOnlyScan(index_only_scan)),
+            PlanNode::IndexOnlyScan(index_only_scan) => {
+                self.get_scan(ScanNode::IndexOnlyScan(index_only_scan))
+            }
             PlanNode::Gather(gather) => {
                 // adjust join card according to the degree of parallism
-                self.card_multiplier *= gather.num_workers as f64;
+                if let Some(num_workers) = gather.num_workers {
+                    self.card_multiplier *= num_workers as f64;
+                }
                 let children = gather.children;
                 match children {
                     Some(children) => match children.len() {
@@ -100,7 +110,6 @@ impl CardCorrection {
         rel_name
     }
 }
-
 
 #[cfg(test)]
 mod test_card_correction_rule {

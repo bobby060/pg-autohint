@@ -607,7 +607,7 @@ mod test_visit_nodes {
         let gather_node = Gather {
             children: Some(vec![PlanNode::SeqScan(scan_node)]),
             parent_relationship: None,
-            num_workers: 1,
+            num_workers: Some(1),
             output: None,
         };
         let result = gather_node.visit_plan_node();

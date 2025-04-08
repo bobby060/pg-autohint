@@ -578,7 +578,7 @@ pub struct Gather {
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Workers Planned")]
-    pub num_workers: i64,
+    pub num_workers: Option<i64>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
