@@ -11,9 +11,14 @@ impl PgHintList {
     //// Args:
     //// - sql: sql string to concat with self
     //// Returns:
-    //// - sql string with hint list
+    //// - sql string with hint list, if hint list is empty, original sql is returned
     pub fn with_sql(self, sql: &str) -> String {
-        format!("{}\n{}", self.to_string(), sql)
+        let hints = self.to_string();
+        if hints.is_empty() {
+            sql.to_string()
+        } else {
+            format!("{}\n{}", hints, sql)
+        }
     }
 
     //// Add hint to hint list
