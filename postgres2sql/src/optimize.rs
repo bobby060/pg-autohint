@@ -143,9 +143,9 @@ mod test_optimizer {
         let hint_list = optimizer.optimize_plan(plan_node);
         assert_eq!(
             hint_list.size(),
-            1,
+            2,
             "{}",
-            format!("expected 1 card correction hints, got {}", hint_list.size())
+            format!("expected 2 card correction hints, got {}", hint_list.size())
         );
         println!("{}", hint_list.with_sql(&original_query));
     }

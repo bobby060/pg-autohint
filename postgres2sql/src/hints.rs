@@ -13,7 +13,7 @@ impl PgHintList {
     //// Returns:
     //// - sql string with hint list
     pub fn with_sql(self, sql: &str) -> String {
-        format!("{}{}", self.to_string(), sql)
+        format!("{}\n{}", self.to_string(), sql)
     }
 
     //// Add hint to hint list
