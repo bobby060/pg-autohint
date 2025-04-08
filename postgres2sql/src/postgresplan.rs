@@ -213,6 +213,8 @@ pub struct HashJoin {
     pub actual_rows: Option<i64>,
     #[serde(rename = "Join Filter")]
     pub join_filter: Option<String>,
+    #[serde(rename = "Actual Loops")]
+    pub actual_loops: Option<i64>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
@@ -232,6 +234,8 @@ pub struct MergeJoin {
     pub plan_rows: Option<i64>,
     #[serde(rename = "Actual Rows")]
     pub actual_rows: Option<i64>,
+    #[serde(rename = "Actual Loops")]
+    pub actual_loops: Option<i64>,
     #[serde(rename = "Join Filter")]
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
@@ -256,6 +260,8 @@ pub struct NestedLoopJoin {
     pub join_filter: Option<String>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Actual Loops")]
+    pub actual_loops: Option<i64>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
 }
@@ -508,9 +514,27 @@ impl JoinNode {
 
     pub fn get_card(&self) -> Option<i64> {
         match self {
-            JoinNode::HashJoin(hash_join) => hash_join.actual_rows.clone(),
-            JoinNode::MergeJoin(merge_join) => merge_join.actual_rows.clone(),
-            JoinNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.actual_rows.clone(),
+            JoinNode::HashJoin(hash_join) => {
+                match (hash_join.actual_rows, hash_join.actual_loops) {
+                    (Some(rows), Some(loops)) => Some(rows * loops),
+                    (Some(rows), None) => Some(rows),
+                    _ => None,
+                }
+            },
+            JoinNode::MergeJoin(merge_join) => {
+                match (merge_join.actual_rows, merge_join.actual_loops) {
+                    (Some(rows), Some(loops)) => Some(rows * loops),
+                    (Some(rows), None) => Some(rows),
+                    _ => None,
+                }
+            },
+            JoinNode::NestedLoopJoin(nested_loop_join) => {
+                match (nested_loop_join.actual_rows, nested_loop_join.actual_loops) {
+                    (Some(rows), Some(loops)) => Some(rows * loops),
+                    (Some(rows), None) => Some(rows),
+                    _ => None,
+                }
+            },
         }
     }
 }

@@ -57,23 +57,6 @@ impl CardCorrection {
             PlanNode::IndexOnlyScan(index_only_scan) => {
                 self.get_scan(ScanNode::IndexOnlyScan(index_only_scan))
             }
-            PlanNode::Gather(gather) => {
-                // adjust join card according to the degree of parallism
-                if let Some(num_workers) = gather.num_workers {
-                    self.card_multiplier *= num_workers as f64;
-                }
-                let children = gather.children;
-                match children {
-                    Some(children) => match children.len() {
-                        1 => self.apply_recursive(children.get(0).unwrap().clone()),
-                        _ => {
-                            todo!("handle subqueries where a node like Filter could have 2 child, one for input one for subquery as predicate, 
-                                  also need to handle SetOps nodes that can have two children, that's technically also subqueries")
-                        }
-                    },
-                    None => panic!("unreachable"),
-                }
-            }
             _ => {
                 // if not join or scan nodes, visit children
                 let children = plan.get_children();
@@ -118,7 +101,7 @@ mod test_card_correction_rule {
 
     #[test]
     fn test_apply() {
-        let mut card_correction_rule = CardCorrection::new(1.2);
+        let mut card_correction_rule = CardCorrection::new(1.0);
 
         // in this test, one NLJ has very large plan rows and one have actual rows larger than plan rows
         // expected behavior is two hashjoin hints
