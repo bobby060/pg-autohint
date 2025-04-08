@@ -1,5 +1,15 @@
-// use postgres2sql;
-use postgres2sql::connector::convert_sql_file_to_plan;
+use crate::connector::convert_sql_file_to_plan;
+
+pub mod connector;
+pub mod hints;
+pub mod optimize;
+pub mod plan2ast;
+pub mod postgresplan;
+pub mod rule;
+pub mod rules;
+
+#[cfg(test)]
+pub mod test_utils;
 
 fn main() {
     let help = "Usage: postgres2sql convert [--analyze] <sql_file> <json_out_path>";

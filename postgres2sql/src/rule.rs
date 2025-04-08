@@ -1,4 +1,4 @@
-use crate::hints::{PgHint, PgHintList};
+use crate::hints::PgHintList;
 use crate::postgresplan::PlanNode;
 
 pub trait Rule {

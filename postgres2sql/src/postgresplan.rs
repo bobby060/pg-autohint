@@ -1,4 +1,4 @@
-/// Represents a Postgres plan
+/// Represents the different nodes of a Postgres Plan
 /// Deserializes a Postgres plan from a JSON string
 use serde::*;
 use sqlparser::ast::SetOperator;

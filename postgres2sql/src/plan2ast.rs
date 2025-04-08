@@ -5,36 +5,29 @@ use sqlparser::ast::helpers::attached_token::AttachedToken;
 use sqlparser::dialect::GenericDialect;
 use sqlparser::parser::Parser;
 use sqlparser::{ast::*, parser};
-/// Given a Postgres plan, convert it to a datafusion AST
-///
-///
-///
-///
-#[deprecated(since = "0.1.0", note = "use PlanWrapper.visit_plan_node() instead")]
-pub fn plan2ast(plan: PlanNode) -> Result<Query, String> {
-    let expr = plan.visit_plan_node()?;
 
-    // Placeholder for the AST
-    if let SetExpr::Query(query) = expr {
-        Ok(*query)
-    } else {
-        let query = Query {
-            with: None,
-            body: Box::new(expr),
-            order_by: None,
-            limit: None,
-            limit_by: vec![],
-            offset: None,
-            fetch: None,
-            locks: vec![],
-            for_clause: None,
-            settings: None,
-            format_clause: None,
-        };
-        Ok(query)
-    }
+//// Given a Postgres plan, convert it to a datafusion AST
+/// Converts a Postgres execution plan in JSON format to a SQL query string
+///
+/// # Arguments
+///
+/// * `json` - A JSON string containing a Postgres execution plan
+///
+/// # Returns
+///
+/// * `Ok(String)` - The reconstructed SQL query as a string
+/// * `Err(String)` - Error message if conversion fails
+pub fn postgres2sql(json: String) -> Result<String, String> {
+    let plan = postgres2plan(&json).map_err(|e| e.to_string())?;
+
+    let ast = plan.visit_plan_node()?;
+
+    let sql = ast.to_string();
+
+    Ok(sql)
 }
 
+/// Trait to convert a plan node to a AST SetExpr
 pub trait Visit {
     fn visit_plan_node(self) -> Result<SetExpr, String>;
 }
@@ -158,11 +151,7 @@ impl Visit for ScanNode {
 
         if let ScanNode::IndexOnlyScan(index_only_scan) = &self {
             let index_cond: Expr = FromStr::from_str(index_only_scan.index_cond.as_ref().unwrap())?;
-            selection = Some(Expr::BinaryOp {
-                left: Box::new(selection.unwrap()),
-                right: Box::new(index_cond),
-                op: BinaryOperator::And,
-            });
+            selection = Some(index_cond);
         }
         // build ast struct
         let select = Select {
@@ -694,103 +683,212 @@ fn parse_query(query: &str) -> Result<Box<Query>, parser::ParserError> {
     let _token = parser.token_at(0).clone();
     parser.parse_query()
 }
-
 // test module for impl FromStr trait for string expressions in PlanNodes
 // TODO: most of the tests does not do assert! yet, they simply print the converted Expr!
-// #[cfg(test)]
-// mod test_from_str {
-//     use super::*;
+#[cfg(test)]
+mod test_from_str {
+    use super::*;
+    #[test]
+    fn test_equality_expr() {
+        let expr = parse_expr("(title_principals.tconst = title_basics.tconst)").unwrap();
+        println!("{:#?}", expr);
+        assert!(matches!(expr, Expr::Nested(inner) if matches!(*inner, Expr::BinaryOp { .. })));
+    }
 
-//     #[test]
-//     fn test_equality_expr() {
-//         let expr = parse_expr("(title_principals.tconst = title_basics.tconst)").unwrap();
-//         println!("{:#?}", expr);
-//         assert!(matches!(expr, Expr::Nested(inner) if matches!(*inner, Expr::BinaryOp { .. })));
-//     }
+    #[test]
+    fn test_single_quoted_string_expr() {
+        let expr = parse_expr("(category = 'actor'::text)").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     #[test]
-//     fn test_single_quoted_string_expr() {
-//         let expr = parse_expr("(category = 'actor'::text)").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_value() {
+        let expr = parse_expr("'value1'").unwrap();
+        println!("{:#?}", expr);
 
-//     #[test]
-//     fn test_value() {
-//         let expr = parse_expr("'value1'").unwrap();
-//         println!("{:#?}", expr);
+        let expr = parse_expr("123").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//         let expr = parse_expr("123").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_simple_identifier() {
+        let expr = parse_expr("title_basics").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     #[test]
-//     fn test_simple_identifier() {
-//         let expr = parse_expr("title_basics").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_simple_identifier_with_schema_name() {
+        let expr = parse_expr("db_schema.title_basics").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     #[test]
-//     fn test_simple_identifier_with_schema_name() {
-//         let expr = parse_expr("db_schema.title_basics").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_compound_identifier() {
+        let expr = parse_expr("title_principals.tconst").unwrap();
+        println!("{:#?}", expr);
+        assert!(matches!(expr, Expr::CompoundIdentifier { .. }));
+    }
 
-//     #[test]
-//     fn test_compound_identifier() {
-//         let expr = parse_expr("title_principals.tconst").unwrap();
-//         println!("{:#?}", expr);
-//         assert!(matches!(expr, Expr::CompoundIdentifier { .. }));
-//     }
+    #[test]
+    fn test_type_cast_expr() {
+        let expr = parse_expr("(name_basics.nconst)::text)").unwrap();
+        println!("{:#?}", expr);
+        assert!(matches!(expr, Expr::Cast { .. }));
 
-//     #[test]
-//     fn test_type_cast_expr() {
-//         let expr = parse_expr("(name_basics.nconst)::text)").unwrap();
-//         println!("{:#?}", expr);
-//         assert!(matches!(expr, Expr::Cast { .. }));
+        let expr = parse_expr("((startyear)::numeric > $2)").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//         let expr = parse_expr("((startyear)::numeric > $2)").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_and_expr() {
+        let expr = parse_expr("((category = 'actor'::text) AND (job = 'actor'::text))").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     #[test]
-//     fn test_and_expr() {
-//         let expr = parse_expr("((category = 'actor'::text) AND (job = 'actor'::text))").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_pg_like_match_expr() {
+        let expr = parse_expr("(genres ~~ '%Comedy%'::text)").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     #[test]
-//     fn test_pg_like_match_expr() {
-//         let expr = parse_expr("(genres ~~ '%Comedy%'::text)").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    /// for matching this placeholder, we need to parse the "InitPlan .. (return $1)" statement in "Subplan Name" field
+    #[test]
+    fn test_subquery_placeholder_expr() {
+        let expr = parse_expr("((runtimeminutes)::numeric > $1)").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     /// for matching this placeholder, we need to parse the "InitPlan .. (return $1)" statement in "Subplan Name" field
-//     #[test]
-//     fn test_subquery_placeholder_expr() {
-//         let expr = parse_expr("((runtimeminutes)::numeric > $1)").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_is_null_expr() {
+        let expr = parse_expr("(runtimeminutes IS NOT NULL)").unwrap();
+        println!("{:#?}", expr);
 
-//     #[test]
-//     fn test_is_null_expr() {
-//         let expr = parse_expr("(runtimeminutes IS NOT NULL)").unwrap();
-//         println!("{:#?}", expr);
+        let expr = parse_expr("(runtimeminutes IS NULL)").unwrap();
+        println!("{:#?}", expr);
+    }
 
-//         let expr = parse_expr("(runtimeminutes IS NULL)").unwrap();
-//         println!("{:#?}", expr);
-//     }
+    #[test]
+    fn test_complex_expr() {
+        let expr = parse_expr("((tb.startyear > 2000) OR ((r.num_votes > 1000000) AND (tc.directors !~~ '%Tom%'::text)))")
+        .unwrap();
+        println!("{:#?}", expr);
+    }
 
-//     #[test]
-//     fn test_complex_expr() {
-//         let expr = parse_expr("((tb.startyear > 2000) OR ((r.num_votes > 1000000) AND (tc.directors !~~ '%Tom%'::text)))")
-//         .unwrap();
-//         println!("{:#?}", expr);
-//     }
+    /// In this case, the parser IGNORES the DESC suffix, we need to parse Sort Key field ourselfs, handling DESC
+    #[test]
+    fn fail_test_sort_key_desc() {
+        let expr = parse_expr("title_basics.primarytitle DESC").unwrap();
+        println!("{:#?}", expr);
+    }
+}
 
-//     /// In this case, the parser IGNORES the DESC suffix, we need to parse Sort Key field ourselfs, handling DESC
-//     #[test]
-//     fn fail_test_sort_key_desc() {
-//         let expr = parse_expr("title_basics.primarytitle DESC").unwrap();
-//         println!("{:#?}", expr);
-//     }
-// }
+#[cfg(test)]
+mod test_visit {
+    use super::*;
+    use crate::connector::*;
+    use crate::test_utils::*;
+    use std::path::Path;
+
+    // #[test]
+    fn test_input_plan(input_path: &str) {
+        let input =
+            std::fs::read_to_string(Path::new(input_path)).expect("Failed to read input file");
+        let new_sql = postgres2sql(input).expect("Failed to parse input");
+
+        let sql_path = input_path.replace("json", "sql");
+        let original_sql = std::fs::read_to_string(Path::new(sql_path.as_str()))
+            .expect("Failed to read original sql file");
+
+        println!("Original SQL: {}", &original_sql);
+
+        println!("New SQL: {}", &new_sql);
+
+        correctness_test(
+            "imdb",
+            &original_sql,
+            &new_sql,
+            new_sql.contains("ORDER BY"),
+        );
+    }
+
+    #[test]
+    fn test_order_by_visit() {
+        test_input_plan("resources/test_json/simple_orderby.json");
+        test_input_plan("resources/test_json/simple_orderby_desc.json");
+    }
+
+    #[test]
+    fn test_limit() {
+        test_input_plan("resources/test_json/q4.json");
+    }
+
+    #[test]
+    fn test_union_all() {
+        test_input_plan("resources/test_json/union_all.json");
+    }
+
+    // #[test]
+    // fn test_values_scan() {
+    //     test_input_plan("resources/test_json/values_scan.json");
+    // }
+
+    #[test]
+    fn test_simple_index_scan() {
+        test_input_plan("resources/test_json/simple_index_scan.json");
+    }
+
+    #[test]
+    fn test_group_by_visit() {
+        test_input_plan("resources/test_json/simple_groupby.json");
+    }
+
+    #[test]
+    fn test_limit_visit() {
+        test_input_plan("resources/test_json/q4.json");
+    }
+
+    #[test]
+    fn test_nlj() {
+        test_input_plan("resources/test_json/q7.json");
+    }
+
+    // fails
+    // #[test]
+    // fn test_union() {
+    //     test_input_plan("resources/test_json/q9.json");
+    // }
+
+    #[test]
+    // This takes a long time to run - try to replace with new query?
+    fn test_hash_join() {
+        test_input_plan("resources/test_json/q3.json");
+    }
+
+    #[test]
+    fn test_not_visited() {
+        let plan = ResultNode {
+            parent_relationship: None,
+            subplan_name: None,
+            output: None,
+            filter: None,
+        };
+        assert_eq!(
+            PlanNode::ResultNode(plan).visit_plan_node(),
+            Err("Node not implemented".to_string())
+        );
+    }
+
+    #[test]
+    fn test_visit_root() {
+        let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+        let root = query_to_plan("SELECT * FROM title_basics", &mut conn, false);
+        let ast = root.visit_plan_node();
+        println!("{:#?}", ast);
+    }
+
+    // fails
+    // #[test]
+    // fn test_visit_index_only_scan() {
+    //     test_input_plan("resources/test_json/q10.json");
+    // }
+}

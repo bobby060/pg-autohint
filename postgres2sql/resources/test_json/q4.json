@@ -1,1 +1,106 @@
-[{"Plan":{"Node Type":"Limit","Parent Relationship":null,"Plan Rows":100,"Plans":[{"Node Type":"Nested Loop","Parent Relationship":"Outer","Join Type":"Inner","Inner Unique":false,"Join Filter":null,"Plans":[{"Node Type":"Nested Loop","Parent Relationship":"Outer","Join Type":"Inner","Inner Unique":false,"Join Filter":null,"Plans":[{"Node Type":"Seq Scan","Parent Relationship":"Outer","Relation Name":"title_principals","Alias":"title_principals","Filter":null,"Output":["title_principals.tconst","title_principals.ordering","title_principals.nconst","title_principals.category","title_principals.job","title_principals.characters"]},{"Node Type":"Memoize","Parent Relationship":"Inner","Plans":[{"Node Type":"Index Scan","Parent Relationship":"Outer","Relation Name":"title_basics","Index Name":"title_basics_pkey","Alias":"title_basics","Filter":null,"Scan Direction":"Forward","Output":["title_basics.primarytitle","title_basics.tconst"]}],"Output":["title_basics.primarytitle","title_basics.tconst"],"Cache Key":"title_principals.tconst","Cache Mode":"logical"}],"Output":["title_basics.primarytitle","title_principals.nconst"]},{"Node Type":"Memoize","Parent Relationship":"Inner","Plans":[{"Node Type":"Index Scan","Parent Relationship":"Outer","Relation Name":"name_basics","Index Name":"name_basics_pkey","Alias":"name_basics","Filter":null,"Scan Direction":"Forward","Output":["name_basics.primaryname","name_basics.nconst"]}],"Output":["name_basics.primaryname","name_basics.nconst"],"Cache Key":"title_principals.nconst","Cache Mode":"logical"}],"Output":["title_basics.primarytitle","name_basics.primaryname"]}],"Output":["title_basics.primarytitle","name_basics.primaryname"]}}]
+[
+    {
+        "Plan": {
+            "Node Type": "Limit",
+            "Parent Relationship": null,
+            "Plan Rows": 100,
+            "Plans": [
+                {
+                    "Node Type": "Nested Loop",
+                    "Parent Relationship": "Outer",
+                    "Join Type": "Inner",
+                    "Inner Unique": false,
+                    "Join Filter": null,
+                    "Plans": [
+                        {
+                            "Node Type": "Nested Loop",
+                            "Parent Relationship": "Outer",
+                            "Join Type": "Inner",
+                            "Inner Unique": false,
+                            "Join Filter": null,
+                            "Plans": [
+                                {
+                                    "Node Type": "Seq Scan",
+                                    "Parent Relationship": "Outer",
+                                    "Relation Name": "title_principals",
+                                    "Alias": "title_principals",
+                                    "Filter": null,
+                                    "Output": [
+                                        "title_principals.tconst",
+                                        "title_principals.ordering",
+                                        "title_principals.nconst",
+                                        "title_principals.category",
+                                        "title_principals.job",
+                                        "title_principals.characters"
+                                    ]
+                                },
+                                {
+                                    "Node Type": "Memoize",
+                                    "Parent Relationship": "Inner",
+                                    "Plans": [
+                                        {
+                                            "Node Type": "Index Scan",
+                                            "Parent Relationship": "Outer",
+                                            "Relation Name": "title_basics",
+                                            "Index Name": "title_basics_pkey",
+                                            "Alias": "title_basics",
+                                            "Filter": null,
+                                            "Scan Direction": "Forward",
+                                            "Output": [
+                                                "title_basics.primarytitle",
+                                                "title_basics.tconst"
+                                            ]
+                                        }
+                                    ],
+                                    "Output": [
+                                        "title_basics.primarytitle",
+                                        "title_basics.tconst"
+                                    ],
+                                    "Cache Key": "title_principals.tconst",
+                                    "Cache Mode": "logical"
+                                }
+                            ],
+                            "Output": [
+                                "title_basics.primarytitle",
+                                "title_principals.nconst"
+                            ]
+                        },
+                        {
+                            "Node Type": "Memoize",
+                            "Parent Relationship": "Inner",
+                            "Plans": [
+                                {
+                                    "Node Type": "Index Scan",
+                                    "Parent Relationship": "Outer",
+                                    "Relation Name": "name_basics",
+                                    "Index Name": "name_basics_pkey",
+                                    "Alias": "name_basics",
+                                    "Filter": null,
+                                    "Scan Direction": "Forward",
+                                    "Output": [
+                                        "name_basics.primaryname",
+                                        "name_basics.nconst"
+                                    ]
+                                }
+                            ],
+                            "Output": [
+                                "name_basics.primaryname",
+                                "name_basics.nconst"
+                            ],
+                            "Cache Key": "title_principals.nconst",
+                            "Cache Mode": "logical"
+                        }
+                    ],
+                    "Output": [
+                        "title_basics.primarytitle",
+                        "name_basics.primaryname"
+                    ]
+                }
+            ],
+            "Output": [
+                "title_basics.primarytitle",
+                "name_basics.primaryname"
+            ]
+        }
+    }
+]

@@ -13,7 +13,7 @@ impl PgHintList {
     //// Returns:
     //// - sql string with hint list
     pub fn with_sql(self, sql: &str) -> String {
-        format!("{} {}", self.to_string(), sql)
+        format!("{}{}", self.to_string(), sql)
     }
 
     //// Add hint to hint list
@@ -40,6 +40,9 @@ impl PgHintList {
 
 impl fmt::Display for PgHintList {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.0.is_empty() {
+            return write!(f, "");
+        }
         write!(
             f,
             "/*+ {} */",
@@ -121,3 +124,86 @@ impl fmt::Display for PgHint {
 }
 
 // TODO: Add tests
+
+#[cfg(test)]
+mod test_hints {
+    use super::*;
+
+    #[test]
+    fn test_hint_display() {
+        let hint = PgHint::SeqScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "SeqScan(title_basics)");
+
+        let hint = PgHint::IndexScan {
+            table: "title_basics".to_string(),
+            index: Some("idx_title_basics_tconst".to_string()),
+        };
+        assert_eq!(
+            hint.to_string(),
+            "IndexScan(title_basics idx_title_basics_tconst)"
+        );
+
+        let hint = PgHint::NoSeqScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "NoSeqScan(title_basics)");
+
+        let hint = PgHint::NoIndexScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "NoIndexScan(title_basics)");
+
+        let hint = PgHint::NoIndexOnlyScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "NoIndexOnlyScan(title_basics)");
+
+        let hint = PgHint::JoinOrder {
+            join_order: "title_basics, title_ratings".to_string(),
+        };
+        assert_eq!(hint.to_string(), "Leading(title_basics, title_ratings)");
+
+        let hint = PgHint::HashJoin {
+            tables: "title_basics, title_ratings".to_string(),
+        };
+        assert_eq!(hint.to_string(), "HashJoin(title_basics, title_ratings)");
+
+        let hint = PgHint::MergeJoin {
+            tables: "title_basics, title_ratings".to_string(),
+        };
+        assert_eq!(hint.to_string(), "MergeJoin(title_basics, title_ratings)");
+
+        let hint = PgHint::IndexOnlyScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "IndexOnlyScan(title_basics)");
+
+        let hint = PgHint::ValueScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "ValueScan(title_basics)");
+
+        let hint = PgHint::SubqueryScan {
+            table: "title_basics".to_string(),
+        };
+        assert_eq!(hint.to_string(), "SubqueryScan(title_basics)");
+    }
+
+    #[test]
+    fn test_hint_list_display() {
+        let mut hint_list = PgHintList::new();
+        hint_list.add_hint(PgHint::SeqScan {
+            table: "title_basics".to_string(),
+        });
+        hint_list.add_hint(PgHint::IndexScan {
+            table: "title_basics".to_string(),
+            index: Some("idx_title_basics_tconst".to_string()),
+        });
+        assert_eq!(
+            hint_list.to_string(),
+            "/*+ SeqScan(title_basics) IndexScan(title_basics idx_title_basics_tconst) */"
+        );
+    }
+}

@@ -36,7 +36,7 @@ pub fn establish_connection(
 /// * `query`: The query to convert to a SQL query to serialized postgres plan
 ///
 /// # Returns Vec<PlanWrapper>
-pub fn query_to_plan(query: &str, conn: &mut Client, analyze: bool) -> Vec<PlanRoot> {
+pub fn query_to_plan(query: &str, conn: &mut Client, analyze: bool) -> PlanRoot {
     let prefix = format!(
         "EXPLAIN (FORMAT JSON, VERBOSE TRUE {})",
         if analyze { ", ANALYZE TRUE" } else { "" }
@@ -47,9 +47,19 @@ pub fn query_to_plan(query: &str, conn: &mut Client, analyze: bool) -> Vec<PlanR
 
     let value: Option<Json<Vec<PlanRoot>>> = result.get(0).unwrap().get(0);
 
-    value.unwrap().0
+    value.unwrap().0[0].to_owned()
 }
 
+/// Convert a SQL query to a PlanWrapper struct
+///
+/// Unwrap the PlanWrapper to get the root PlanNode
+///
+/// # Arguments
+///
+/// * `sql_file`: The path to the SQL file to convert to a PlanWrapper struct
+/// * `json_out_path`: The path to the JSON file to write the PlanWrapper struct to
+/// * `analyze`: Whether to analyze the query
+///
 pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str, analyze: bool) {
     let sql = std::fs::read_to_string(sql_file).expect("Failed to read sql file");
 
@@ -59,7 +69,7 @@ pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str, analyze: bo
 
     let json_out = std::fs::File::create(json_out_path).expect("Failed to create json out file");
 
-    serde_json::to_writer(json_out, &plan).expect("Failed to write json out file");
+    serde_json::to_writer(json_out, &vec![plan]).expect("Failed to write json out file");
 }
 
 #[cfg(test)]
@@ -91,5 +101,14 @@ mod test_connector {
         let result = query_to_plan(sql, &mut conn, true);
 
         println!("{:?}", result);
+    }
+
+    #[test]
+    fn test_convert_sql_file_to_plan() {
+        convert_sql_file_to_plan(
+            "resources/test_sql/q1.sql",
+            "resources/test_json/q1_test.json",
+            false,
+        );
     }
 }

@@ -154,4 +154,16 @@ mod test_example_rule {
             format!("expected 2 hashjoin hints, got {}", hint_list.size())
         );
     }
+
+    #[test]
+    #[ignore] // query takes a very long time to run
+    fn nlj_to_hashjoin_rule_test() {
+        crate::test_utils::rule_test(
+            Box::new(NljToHashJoin::new(1.2, 1000)),
+            std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
+                .unwrap()
+                .as_str(),
+            true,
+        );
+    }
 }

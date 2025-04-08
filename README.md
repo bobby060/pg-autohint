@@ -44,7 +44,18 @@ Run all tests
 Run specific test
 ```cargo test q10 -- --nocapture```
 
+### Testing
+
+Install code coverage tool `cargo +stable install cargo-llvm-cov --locked`
+
+Redo code coverage test"
+```cargo llvm-cov --html
+```
+
 ## System design
 1. Parse Postgres JSON into tree
 2. Convert tree into SQL AST
 3. Convert SQL AST into plain text
+
+
+

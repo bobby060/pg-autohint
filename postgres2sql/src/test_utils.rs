@@ -93,12 +93,12 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
     }
 }
 
-pub fn rule_test(rule: Box<dyn Rule>, sql: &str) {
+pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
     let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
     let mut optimizer = Optimizer { rules: vec![rule] };
 
-    let new_sql = optimizer.optimize(sql, &mut conn);
+    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze);
 
     correctness_test(
         "imdb",
