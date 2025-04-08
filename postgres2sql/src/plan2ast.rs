@@ -569,6 +569,8 @@ mod test_visit_nodes {
             relation_name: "title_basics".to_string(),
             alias: Some("t1".to_string()),
             filter: Some("(runtimeminutes < 25)".to_string()),
+            actual_rows: None,
+            plan_rows: None,
             output: Some(vec![
                 "title_basics.tconst".to_string(),
                 "titletype".to_string(),
@@ -596,6 +598,8 @@ mod test_visit_nodes {
         let scan_node = SeqScan {
             parent_relationship: Some("Outer".to_string()),
             relation_name: "title_basics".to_string(),
+            actual_rows: None,
+            plan_rows: None,
             alias: None,
             filter: Some("(runtimeminutes < 25)".to_string()),
             output: Some(vec!["tconst".to_string()]),
@@ -603,6 +607,7 @@ mod test_visit_nodes {
         let gather_node = Gather {
             children: Some(vec![PlanNode::SeqScan(scan_node)]),
             parent_relationship: None,
+            num_workers: 1,
             output: None,
         };
         let result = gather_node.visit_plan_node();

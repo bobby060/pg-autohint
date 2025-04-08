@@ -131,7 +131,7 @@ impl NljToHashJoin {
 }
 
 #[cfg(test)]
-mod test_example_rule {
+mod test_nlj_to_hashjoin_rule {
     use super::*;
     use crate::postgresplan::postgres2plan;
 

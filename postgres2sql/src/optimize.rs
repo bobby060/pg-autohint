@@ -78,7 +78,7 @@ mod test_optimizer {
     use crate::postgresplan::postgres2planroot;
 
     use super::*;
-    use crate::rules::NljToHashJoin; // Import NljToHashJoin
+    use crate::rules::{CardCorrection, NljToHashJoin}; // Import NljToHashJoin
 
     /// test NljToHashjoin rule on two NLJs
     #[test]
@@ -120,5 +120,33 @@ mod test_optimizer {
         let new_sql = optimizer.optimize(sql, &mut conn, false);
 
         assert_eq!(new_sql.unwrap(), sql);
+    }
+
+    /// test CardCorrection rule on two NLJs
+    #[test]
+    fn test_card_correction() {
+        let card_correction_rule = CardCorrection::new(1.2);
+
+        // in this test, one NLJ has very large plan rows and one have actual rows larger than plan rows
+        // expected behavior is two hashjoin hints
+        let input_path = "resources/test_json/card_correction_rule_test.json";
+        let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
+        let plan_node = postgres2planroot(&input).unwrap();
+
+        let original_query =
+            std::fs::read_to_string("resources/test_sql/card_correction_rule_test.sql")
+                .expect("Failed to read input file");
+
+        let mut optimizer = Optimizer::new();
+        optimizer.add_rule(Box::new(card_correction_rule));
+
+        let hint_list = optimizer.optimize_plan(plan_node);
+        assert_eq!(
+            hint_list.size(),
+            1,
+            "{}",
+            format!("expected 1 card correction hints, got {}", hint_list.size())
+        );
+        println!("{}", hint_list.with_sql(&original_query));
     }
 }
