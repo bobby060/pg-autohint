@@ -520,21 +520,21 @@ impl JoinNode {
                     (Some(rows), None) => Some(rows),
                     _ => None,
                 }
-            },
+            }
             JoinNode::MergeJoin(merge_join) => {
                 match (merge_join.actual_rows, merge_join.actual_loops) {
                     (Some(rows), Some(loops)) => Some(rows * loops),
                     (Some(rows), None) => Some(rows),
                     _ => None,
                 }
-            },
+            }
             JoinNode::NestedLoopJoin(nested_loop_join) => {
                 match (nested_loop_join.actual_rows, nested_loop_join.actual_loops) {
                     (Some(rows), Some(loops)) => Some(rows * loops),
                     (Some(rows), None) => Some(rows),
                     _ => None,
                 }
-            },
+            }
         }
     }
 }
