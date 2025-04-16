@@ -1,7 +1,7 @@
 use crate::{
-    hints::{PgHint, PgHintList},
-    postgresplan::{JoinNode, PlanNode, ScanNode},
-    rule::Rule,
+    hintengine::rule::Rule,
+    model::hints::{PgHint, PgHintList},
+    model::postgresplan::{JoinNode, PlanNode, ScanNode},
 };
 
 /// NljToHashJoin rule that requires analyze
@@ -133,7 +133,7 @@ impl NljToHashJoin {
 #[cfg(test)]
 mod test_nlj_to_hashjoin_rule {
     use super::*;
-    use crate::postgresplan::postgres2plan;
+    use crate::model::postgresplan::PlanRoot;
 
     #[test]
     fn test_apply() {
@@ -142,11 +142,10 @@ mod test_nlj_to_hashjoin_rule {
         // in this test, one NLJ has very large plan rows and one have actual rows larger than plan rows
         // expected behavior is two hashjoin hints
         let input_path = "resources/test_json/nlj_rule_test.json";
-        let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
-        let plan_node = postgres2plan(&input).unwrap();
+        let plan_node = PlanRoot::from_json(input_path).unwrap();
 
-        let hint_list = nlj_to_hashjoin_rule.apply(plan_node).unwrap();
-        println!("{}", hint_list.clone().with_sql(""));
+        let hint_list = nlj_to_hashjoin_rule.apply(plan_node.plan).unwrap();
+        println!("{}", hint_list.to_string());
         assert_eq!(
             hint_list.size(),
             2,

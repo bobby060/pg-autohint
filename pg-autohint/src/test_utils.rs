@@ -1,6 +1,6 @@
 use crate::connector::establish_connection;
-use crate::optimize::Optimizer;
-use crate::rule::Rule;
+use crate::hintengine::Optimizer;
+use crate::hintengine::Rule;
 use postgres::types::Type;
 
 /// Test correctness of the new sql query by comparing the result with the original sql query
@@ -96,14 +96,15 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
 pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
     let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
-    let mut optimizer = Optimizer { rules: vec![rule] };
+    let mut optimizer = Optimizer::new();
+    optimizer.add_rule(rule);
 
     let new_sql = optimizer.optimize(sql, &mut conn, is_analyze);
 
     correctness_test(
         "imdb",
         sql,
-        new_sql.unwrap().as_str(),
+        new_sql.unwrap().get_original_sql(),
         sql.contains("ORDER BY"),
     );
 }

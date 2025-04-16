@@ -1,8 +1,13 @@
+use crate::plan2ast::Visit;
 /// Represents the different nodes of a Postgres Plan
 /// Deserializes a Postgres plan from a JSON string
 use serde::*;
 use sqlparser::ast::SetOperator;
-/// Wrapper for parsing the whole plan json
+use std::fs::File;
+
+/// Represents an entire Postgres plan
+///
+/// Can be either Analyzed or not
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct PlanRoot {
     #[serde(rename = "Plan")]
@@ -12,8 +17,54 @@ pub struct PlanRoot {
 }
 
 impl PlanRoot {
+    /// Whether or not the plan was analyzed or just explained
     pub fn is_analyzed(&self) -> bool {
         self.execution_time.is_some()
+    }
+
+    /// Save this plan to a file
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to save the plan to
+    pub fn save_json(&self, path: &str) -> Result<(), String> {
+        let file = File::create(path).map_err(|e| e.to_string())?;
+        serde_json::to_writer(file, &vec![self.clone()]).map_err(|e| e.to_string())
+    }
+
+    /// Load a plan from a file
+    ///
+    /// # Arguments
+    ///
+    /// * `path` - The path to load the plan from
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(PlanRoot)` - The loaded plan
+    /// * `Err(String)` - Error message if loading fails
+    pub fn from_json(path: &str) -> Result<PlanRoot, serde_json::Error> {
+        let input = std::fs::read_to_string(path).expect("Failed to read input file");
+        let root: Vec<PlanRoot> = serde_json::from_str(&input)?;
+        Ok(root.first().unwrap().clone())
+    }
+
+    //// Given a Postgres plan, convert it to a datafusion AST
+    /// Converts a Postgres execution plan in JSON format to a SQL query string
+    ///
+    /// # Arguments
+    ///
+    /// * `json` - A JSON string containing a Postgres execution plan
+    ///
+    /// # Returns
+    ///
+    /// * `Ok(String)` - The reconstructed SQL query as a string
+    /// * `Err(String)` - Error message if conversion fails
+    pub fn to_sql(self) -> Result<String, String> {
+        let ast = self.visit_plan_node()?;
+
+        let sql = ast.to_string();
+
+        Ok(sql)
     }
 }
 
@@ -661,39 +712,12 @@ impl ResultNode {
     }
 }
 
-/// convert postgres plan json string to a tree of PlanNode's
-/// # Arguments
-/// + `input_json_path` - input path to the json file
-/// # Returns
-/// result type of PlanNode tree or an `serde` parsing error
-pub fn postgres2plan(input_json: &str) -> Result<PlanNode, serde_json::Error> {
-    parse_json(input_json)
-}
-
-pub fn postgres2planroot(input_json: &str) -> Result<PlanRoot, serde_json::Error> {
-    parse_json_to_root(input_json)
-}
-
-/// parse the input json into a struct representing postgres plan tree
-fn parse_json(input_json: &str) -> Result<PlanNode, serde_json::Error> {
-    let plan_roots: Vec<PlanRoot> = serde_json::from_str(input_json)?;
-    let plan = plan_roots.first().unwrap().plan.clone();
-    Ok(plan)
-}
-
-/// parse the input json into a struct representing postgres plan tree
-fn parse_json_to_root(input_json: &str) -> Result<PlanRoot, serde_json::Error> {
-    let plan_roots: Vec<PlanRoot> = serde_json::from_str(input_json)?;
-    Ok(plan_roots.first().unwrap().clone())
-}
-
 #[cfg(test)]
 mod test_parse_json {
     use super::*;
     use test_each_file::test_each_path;
     fn test_input_plan(input_path: &std::path::Path) {
-        let input = std::fs::read_to_string(input_path).expect("Failed to read input file");
-        let result = postgres2plan(&input).unwrap();
+        let result = PlanRoot::from_json(input_path.to_str().unwrap()).unwrap();
         println!("{:#?}", result)
     }
 

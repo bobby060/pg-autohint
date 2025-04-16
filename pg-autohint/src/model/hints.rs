@@ -1,24 +1,20 @@
 use std::fmt;
+/// Represents postgres hints
+///
 
+/// Represents a list of postgres hints.
+///
+/// When formatted to string, hints are ready to be parsed by postgres.
+///
+/// # Fields
+///
+/// * `hints`: A vector of postgres hints
 #[derive(Clone)]
 pub struct PgHintList(Vec<PgHint>);
 
 impl PgHintList {
     pub fn new() -> Self {
         PgHintList(vec![])
-    }
-    //// Concat hint list with sql string
-    //// Args:
-    //// - sql: sql string to concat with self
-    //// Returns:
-    //// - sql string with hint list, if hint list is empty, original sql is returned
-    pub fn with_sql(self, sql: &str) -> String {
-        let hints = self.to_string();
-        if hints.is_empty() {
-            sql.to_string()
-        } else {
-            format!("{}\n{}", hints, sql)
-        }
     }
 
     //// Add hint to hint list
@@ -28,10 +24,10 @@ impl PgHintList {
         self.0.push(hint);
     }
 
-    //// Add hint list to hint list
+    //// Concat hint list to hint list
     //// Args:
     //// - hint_list: hint list to add
-    pub fn add_hint_list(&mut self, hint_list: PgHintList) {
+    pub fn concat_hint_list(&mut self, hint_list: PgHintList) {
         self.0.extend(hint_list.0);
     }
 
@@ -98,12 +94,12 @@ pub enum PgHint {
         table: String,
     },
     NestLoop {
-        tables: String
+        tables: String,
     },
     CardCorrection {
         tables: String,
-        card: i64
-    }
+        card: i64,
+    },
 }
 
 impl fmt::Display for PgHint {
@@ -129,7 +125,9 @@ impl fmt::Display for PgHint {
             PgHint::IndexOnlyScan { table } => f.write_str(&format!("IndexOnlyScan({})", table)),
             PgHint::ValueScan { table } => f.write_str(&format!("ValueScan({})", table)),
             PgHint::SubqueryScan { table } => f.write_str(&format!("SubqueryScan({})", table)),
-            PgHint::CardCorrection { tables, card } => f.write_str(&format!("Rows({} #{})", tables, card)),
+            PgHint::CardCorrection { tables, card } => {
+                f.write_str(&format!("Rows({} #{})", tables, card))
+            }
         }
     }
 }

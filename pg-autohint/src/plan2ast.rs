@@ -1,31 +1,10 @@
+//// DEPRECATED: Not used anymore. Proof of concept for converting physical plan back to SQL AST
+
+use crate::model::postgresplan::*;
+use sqlparser::{
+    ast::helpers::attached_token::AttachedToken, ast::*, dialect::GenericDialect, parser,
+};
 use std::vec;
-
-use crate::postgresplan::*;
-use sqlparser::ast::helpers::attached_token::AttachedToken;
-use sqlparser::dialect::GenericDialect;
-use sqlparser::parser::Parser;
-use sqlparser::{ast::*, parser};
-
-//// Given a Postgres plan, convert it to a datafusion AST
-/// Converts a Postgres execution plan in JSON format to a SQL query string
-///
-/// # Arguments
-///
-/// * `json` - A JSON string containing a Postgres execution plan
-///
-/// # Returns
-///
-/// * `Ok(String)` - The reconstructed SQL query as a string
-/// * `Err(String)` - Error message if conversion fails
-pub fn postgres2sql(json: String) -> Result<String, String> {
-    let plan = postgres2plan(&json).map_err(|e| e.to_string())?;
-
-    let ast = plan.visit_plan_node()?;
-
-    let sql = ast.to_string();
-
-    Ok(sql)
-}
 
 /// Trait to convert a plan node to a AST SetExpr
 pub trait Visit {
@@ -514,6 +493,7 @@ fn build_base_table(relation_name: &str, alias: Option<String>) -> Result<TableW
 #[cfg(test)]
 mod show_ref_ast {
     use super::*;
+    use sqlparser::parser::Parser;
     // helper func to display reference ast
     fn ref_helper(sql: &str) {
         let dialect = GenericDialect {};
@@ -673,7 +653,7 @@ impl FromStr for Ident {
 
 /// helper function used for parsing a string expression into a sqlparser::ast::Expr
 fn parse_expr(expr: &str) -> Result<Expr, parser::ParserError> {
-    let parser = Parser::new(&GenericDialect);
+    let parser = parser::Parser::new(&GenericDialect);
     let result = parser.try_with_sql(expr);
     let mut parser = result.unwrap();
     let _token = parser.token_at(0).clone();
@@ -681,8 +661,8 @@ fn parse_expr(expr: &str) -> Result<Expr, parser::ParserError> {
 }
 
 /// helper function used for parsing a SQL query string into a Box<sqlparser::ast::Query>
-fn parse_query(query: &str) -> Result<Box<Query>, parser::ParserError> {
-    let parser = Parser::new(&GenericDialect);
+pub fn parse_query(query: &str) -> Result<Box<Query>, parser::ParserError> {
+    let parser = parser::Parser::new(&GenericDialect);
     let result = parser.try_with_sql(query);
     let mut parser = result.unwrap();
     let _token = parser.token_at(0).clone();
@@ -791,14 +771,14 @@ mod test_from_str {
 mod test_visit {
     use super::*;
     use crate::connector::*;
+    use crate::model::query::Query as PgQuery;
     use crate::test_utils::*;
     use std::path::Path;
 
     // #[test]
     fn test_input_plan(input_path: &str) {
-        let input =
-            std::fs::read_to_string(Path::new(input_path)).expect("Failed to read input file");
-        let new_sql = postgres2sql(input).expect("Failed to parse input");
+        let plan_root = PlanRoot::from_json(input_path).expect("Failed to parse input");
+        let new_sql = plan_root.to_sql().expect("Failed to parse input");
 
         let sql_path = input_path.replace("json", "sql");
         let original_sql = std::fs::read_to_string(Path::new(sql_path.as_str()))
@@ -886,7 +866,9 @@ mod test_visit {
     #[test]
     fn test_visit_root() {
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-        let root = query_to_plan("SELECT * FROM title_basics", &mut conn, false);
+
+        let query = PgQuery::new("SELECT * FROM title_basics".to_string(), None, None);
+        let root = query.get_plan(&mut conn, false).unwrap();
         let ast = root.visit_plan_node();
         println!("{:#?}", ast);
     }

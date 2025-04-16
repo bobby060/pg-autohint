@@ -1,5 +1,3 @@
-use crate::postgresplan::PlanRoot;
-use postgres::types::Json;
 use postgres::{Client, NoTls};
 
 /// Establish a connection to a postgres database
@@ -27,51 +25,6 @@ pub fn establish_connection(
     Client::connect(&database_url, NoTls).expect(&format!("Error connecting to {}", database_url))
 }
 
-/// Convert a SQL query to a PlanWrapper struct
-///
-/// Unwrap the PlanWrapper to get the root PlanNode
-///
-/// # Arguments
-///
-/// * `query`: The query to convert to a SQL query to serialized postgres plan
-///
-/// # Returns Vec<PlanWrapper>
-pub fn query_to_plan(query: &str, conn: &mut Client, analyze: bool) -> PlanRoot {
-    let prefix = format!(
-        "EXPLAIN (FORMAT JSON, VERBOSE TRUE {})",
-        if analyze { ", ANALYZE TRUE" } else { "" }
-    );
-
-    let query = format!("{} {}", prefix, query);
-    let result = conn.query(&query, &[]).unwrap();
-
-    let value: Option<Json<Vec<PlanRoot>>> = result.get(0).unwrap().get(0);
-
-    value.unwrap().0[0].to_owned()
-}
-
-/// Convert a SQL query to a PlanWrapper struct
-///
-/// Unwrap the PlanWrapper to get the root PlanNode
-///
-/// # Arguments
-///
-/// * `sql_file`: The path to the SQL file to convert to a PlanWrapper struct
-/// * `json_out_path`: The path to the JSON file to write the PlanWrapper struct to
-/// * `analyze`: Whether to analyze the query
-///
-pub fn convert_sql_file_to_plan(sql_file: &str, json_out_path: &str, analyze: bool) {
-    let sql = std::fs::read_to_string(sql_file).expect("Failed to read sql file");
-
-    let mut client = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-
-    let plan = query_to_plan(&sql, &mut client, analyze);
-
-    let json_out = std::fs::File::create(json_out_path).expect("Failed to create json out file");
-
-    serde_json::to_writer(json_out, &vec![plan]).expect("Failed to write json out file");
-}
-
 #[cfg(test)]
 mod test_connector {
     use super::*;
@@ -79,36 +32,5 @@ mod test_connector {
     #[test]
     fn test_establish_connection() {
         let _conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-    }
-
-    #[test]
-    fn query_to_plan_test() {
-        let sql = " SELECT * FROM name_basics limit 10";
-
-        let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-
-        let result = query_to_plan(sql, &mut conn, false);
-
-        println!("{:?}", result);
-    }
-
-    #[test]
-    fn query_to_plan_analyze_test() {
-        let sql = " SELECT * FROM name_basics limit 10";
-
-        let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-
-        let result = query_to_plan(sql, &mut conn, true);
-
-        println!("{:?}", result);
-    }
-
-    #[test]
-    fn test_convert_sql_file_to_plan() {
-        convert_sql_file_to_plan(
-            "resources/test_sql/q1.sql",
-            "resources/test_json/q1_test.json",
-            false,
-        );
     }
 }
