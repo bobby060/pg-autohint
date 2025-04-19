@@ -99,7 +99,23 @@ pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
     let mut optimizer = Optimizer::new();
     optimizer.add_rule(rule);
 
-    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze);
+    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze, false, None);
+
+    correctness_test(
+        "imdb",
+        sql,
+        new_sql.unwrap().get_original_sql(),
+        sql.contains("ORDER BY"),
+    );
+}
+
+pub fn hint_table_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
+    let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+
+    let mut optimizer = Optimizer::new();
+    optimizer.add_rule(rule);
+
+    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze, true, None);
 
     correctness_test(
         "imdb",

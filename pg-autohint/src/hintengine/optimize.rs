@@ -4,7 +4,7 @@ use crate::model::{
     postgresplan::PlanRoot,
     query::{Query, TimeOut},
 };
-use postgres::Client;
+use postgres::{Client, GenericClient};
 
 /// Optimizer struct
 ///
@@ -31,6 +31,10 @@ impl Optimizer {
     ///
     /// * `sql`: The SQL query to optimize
     /// * `conn`: The connection to the database
+    /// * `is_analyze`: Whether the query would be executed via EXPLAIN ANALYZE
+    /// * `add_hint_table`: Whether the generated hints should be added to hint table
+    /// * `hint_table_app_name`: only used when `add_hint_table` is true. optional, the value of application_name where sessions can apply a hint. 
+    /// if not specified, hint will enabled to all applications
     ///
     /// # Returns
     ///
@@ -40,10 +44,29 @@ impl Optimizer {
         sql: &str,
         conn: &mut Client,
         is_analyze: bool,
+        add_hint_table: bool,
+        hint_table_app_name: Option<&str>,
     ) -> Result<Query, String> {
         let mut query = Query::new(sql.to_string(), None, self.default_timeout.clone());
         let plan = query.get_plan(conn, is_analyze)?;
+        let mut query_id = None;
+        if add_hint_table {
+            // if query_id is None, send a warning that hint table will not be used because no query id is parsed
+            query_id = plan.query_id.clone();
+        }
         let hints: PgHintList = self.apply_rules(plan);
+        if add_hint_table {
+            match query_id {
+                Some(id) => {
+                    let application_name = hint_table_app_name.unwrap_or_else(|| "");
+                    self.add_hint_table(conn, id, application_name, &hints.to_string());
+                }
+                None => {
+                    eprint!("Warning: Hint table will not be used for query because no query ID is parsed: {}.\n
+                    consider running SET compute_query_id = 'on'; ", sql);
+                }
+            }
+        }
         query.add_hint_list(hints);
 
         Ok(query)
@@ -56,6 +79,25 @@ impl Optimizer {
     /// * `rule`: The rule to add
     pub fn add_rule(&mut self, rule: Box<dyn Rule>) {
         self.rules.push(rule);
+    }
+
+    /// add a hint to the hint table
+    /// 
+    /// # Arguments
+    /// 
+    /// * `query_id`: the query identifier obtained via `EXPLAIN VERBOSE`
+    /// * `hints`: The hints to add as String
+    /// * `application_name`: optional, the value of application_name where sessions can apply a hint. if not specified, hint will apply to all applications
+    fn add_hint_table(&mut self, conn: &mut Client, query_id: i64, application_name: &str, hints: &str) {
+        let query = self.add_hint_table_query(query_id, application_name, hints);
+        conn.execute(&query, &[]).unwrap_or_else(|e| {
+            eprintln!("Failed to insert into hint table: {}", e.to_string());
+            0
+        });
+    }
+
+    fn add_hint_table_query(&mut self, query_id: i64, application_name: &str, hints: &str) -> String {
+        format!("INSERT INTO hint_plan.hints(query_id, application_name, hints) VALUES ({}, '{}', '{}');", query_id, application_name, hints)
     }
 
     /// apply rules in self.rules to the plan nodes, will check if plan is analyzed
@@ -127,7 +169,7 @@ mod test_optimizer {
 
         let sql = "SELECT * FROM title_basics";
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-        let new_sql = optimizer.optimize(sql, &mut conn, false);
+        let new_sql = optimizer.optimize(sql, &mut conn, false, false, None);
 
         assert_eq!(new_sql.unwrap().get_original_sql(), sql);
     }
@@ -159,4 +201,17 @@ mod test_optimizer {
         let query = Query::new(original_query, Some(hint_list), None);
         println!("{}", query);
     }
+
+    #[test]
+    fn test_add_hint_table_query() {
+        let mut optimizer = Optimizer::new();
+        let query_id = -7164653396197960701;
+        let application_name = "";
+        let hints = "SeqScan(t1)";
+        assert!(optimizer.add_hint_table_query(query_id, application_name, hints)
+        .eq("INSERT INTO hint_plan.hints(query_id, application_name, hints) VALUES (-7164653396197960701, '', 'SeqScan(t1)');"))
+    }
 }
+
+
+

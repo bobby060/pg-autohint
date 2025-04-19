@@ -44,6 +44,19 @@ Run all tests
 Run specific test
 ```cargo test q10 -- --nocapture```
 
+3. hint table
+To enable hint table feature, connect to the database, load pg_hint_plan, create hint table, and enable hint table by
+```psql
+LOAD 'pg_hint_plan';
+CREATE EXTENSION pg_hint_plan;
+set pg_hint_plan.enable_hint_table='on';
+```
+To get query identifier, run
+```psql
+SET compute_query_id = 'on';
+```
+Then `EXPLAIN VERBOSE` returns query identifier, which would be used to insert hint into hint table
+
 ### Testing
 
 Install code coverage tool `cargo +stable install cargo-llvm-cov --locked`
