@@ -14,6 +14,8 @@ pub struct PlanRoot {
     pub plan: PlanNode,
     #[serde(rename = "Execution Time")]
     pub execution_time: Option<f64>,
+    #[serde(rename = "Query Identifier")]
+    pub query_id: Option<i64>
 }
 
 impl PlanRoot {
