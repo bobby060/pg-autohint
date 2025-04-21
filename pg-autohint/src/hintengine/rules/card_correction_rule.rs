@@ -60,6 +60,12 @@ impl CardCorrection {
             PlanNode::IndexOnlyScan(index_only_scan) => {
                 self.get_scan(ScanNode::IndexOnlyScan(index_only_scan))
             }
+            PlanNode::ValueScan(value_scan) => self.get_scan(ScanNode::ValueScan(value_scan)),
+            PlanNode::BitmapHeapScan(bitmap_heap_scan) => self.get_scan(ScanNode::BitmapHeapScan(bitmap_heap_scan)),
+            PlanNode::SampleScan(sample_scan) => self.get_scan(ScanNode::SampleScan(sample_scan)),
+            PlanNode::WorkTableScan(work_table_scan) => self.get_scan(ScanNode::WorkTableScan(work_table_scan)),
+            PlanNode::CteScan(cte_scan) => self.get_scan(ScanNode::CteScan(cte_scan)),
+            PlanNode::FunctionScan(function_scan) => self.get_scan(ScanNode::FunctionScan(function_scan)),
             _ => {
                 // if not join or scan nodes, visit children
                 let children = plan.get_children();
@@ -89,11 +95,10 @@ impl CardCorrection {
         joins
     }
 
-    /// return the relation name for constructing hints for the joins above
+    /// return the alias for constructing hints for the joins above,
+    /// which can be recognized by pg_hint_plan
     fn get_scan(&mut self, scan_node: ScanNode) -> String {
-        let rel_name = scan_node.get_relation_name();
-
-        rel_name
+        scan_node.get_alias()
     }
 }
 

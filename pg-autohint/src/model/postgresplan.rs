@@ -84,6 +84,18 @@ pub enum PlanNode {
     ValueScan(ValueScan),
     #[serde(rename = "Subquery Scan")]
     SubqueryScan(SubqueryScan),
+    #[serde(rename = "Bitmap Heap Scan")]
+    BitmapHeapScan(BitmapHeapScan),
+    #[serde(rename = "Bitmap Index Scan")]
+    BitmapIndexScan(BitmapIndexScan),
+    #[serde(rename = "Sample Scan")]
+    SampleScan(SampleScan),
+    #[serde(rename = "WorkTable Scan")]
+    WorkTableScan(WorkTableScan),
+    #[serde(rename = "CTE Scan")]
+    CteScan(CteScan),
+    #[serde(rename = "Function Scan")]
+    FunctionScan(FunctionScan),
     // joins
     Hash(Hash),
     #[serde(rename = "Hash Join")]
@@ -95,6 +107,8 @@ pub enum PlanNode {
     Sort(Sort),
     Unique(Unique), // Alias for distinct
     Append(Append), // Alias for Union (we think?)
+    #[serde(rename = "Merge Append")]
+    MergeAppend(MergeAppend),
     Gather(Gather),
     #[serde(rename = "Gather Merge")]
     GatherMerge(GatherMerge),
@@ -103,16 +117,18 @@ pub enum PlanNode {
     #[serde(rename = "Index Only Scan")]
     IndexOnlyScan(IndexOnlyScan),
     Memoize(Memoize),
-    #[serde(rename = "SetOp")]
     SetOp(SetOp),
-    #[serde(rename = "LockRows")]
     LockRows(LockRows),
     #[serde(rename = "Result")]
     ResultNode(ResultNode),
     #[serde(rename = "Incremental Sort")]
     IncrementalSort(IncrementalSort),
-    #[serde(rename = "WindowAgg")]
     WindowAgg(WindowAgg),
+    BitmapOr(BitmapOr),
+    BitmapAnd(BitmapAnd),
+    #[serde(rename = "Recursive Union")]
+    RecursiveUnion(RecursiveUnion),
+    ProjectSet(ProjectSet),
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -149,9 +165,9 @@ pub struct SeqScan {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
     #[serde(rename = "Relation Name")]
-    pub relation_name: String,
+    pub relation_name: Option<String>,
     #[serde(rename = "Alias")]
-    pub alias: Option<String>,
+    pub alias: String,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
     #[serde(rename = "Plan Rows")]
@@ -166,11 +182,11 @@ pub struct IndexScan {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
     #[serde(rename = "Relation Name")]
-    pub relation_name: String,
+    pub relation_name: Option<String>,
     #[serde(rename = "Index Name")]
     pub index_name: String,
     #[serde(rename = "Alias")]
-    pub alias: Option<String>,
+    pub alias: String,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
     #[serde(rename = "Scan Direction")]
@@ -188,11 +204,11 @@ pub struct IndexOnlyScan {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
     #[serde(rename = "Relation Name")]
-    pub relation_name: String,
+    pub relation_name: Option<String>,
     #[serde(rename = "Index Name")]
     pub index_name: String,
     #[serde(rename = "Alias")]
-    pub alias: Option<String>,
+    pub alias: String,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
     #[serde(rename = "Scan Direction")]
@@ -210,7 +226,7 @@ pub struct IndexOnlyScan {
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ValueScan {
     #[serde(rename = "Alias")]
-    pub alias: Option<String>,
+    pub alias: String,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
     #[serde(rename = "Plan Rows")]
@@ -226,7 +242,7 @@ pub struct SubqueryScan {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
     #[serde(rename = "Alias")]
-    pub alias: Option<String>,
+    pub alias: String,
     #[serde(rename = "Filter")]
     pub filter: Option<String>,
     #[serde(rename = "Output")]
@@ -235,6 +251,119 @@ pub struct SubqueryScan {
     pub plan_rows: Option<i64>,
     #[serde(rename = "Actual Rows")]
     pub actual_rows: Option<i64>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BitmapHeapScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub relation_name: Option<String>,
+    #[serde(rename = "Alias")]
+    pub alias: String,
+    #[serde(rename = "Recheck Cond")]
+    pub filter: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BitmapIndexScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Index Name")]
+    pub index_name: String,
+    #[serde(rename = "Index Cond")]
+    pub index_cond: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SampleScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub relation_name: Option<String>,
+    #[serde(rename = "Alias")]
+    pub alias: String,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Sampling Method")]
+    pub sampling_method: Option<String>,
+    #[serde(rename = "Sampling Parameters")]
+    pub sampling_parameters: Option<Vec<String>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct WorkTableScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "CTE Name")]
+    pub cte_name: Option<String>,
+    #[serde(rename = "Alias")]
+    pub alias: String,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct CteScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "CTE Name")]
+    pub cte_name: Option<String>,
+    #[serde(rename = "Alias")]
+    pub alias: String,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct FunctionScan {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Function Name")]
+    pub function_name: Option<String>,
+    #[serde(rename = "Alias")]
+    pub alias: String,
+    #[serde(rename = "Schema")]
+    pub schema: Option<String>,
+    #[serde(rename = "Filter")]
+    pub filter: Option<String>,
+    #[serde(rename = "Function Call")]
+    pub function_call: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
     #[serde(rename = "Plans")]
     pub children: Option<Vec<PlanNode>>,
 }
@@ -395,6 +524,17 @@ impl PlanNode {
             PlanNode::ResultNode(_) => None,
             PlanNode::IncrementalSort(incremental_sort) => incremental_sort.children.clone(),
             PlanNode::WindowAgg(window_agg) => window_agg.children.clone(),
+            PlanNode::BitmapHeapScan(bitmap_heap_scan) => bitmap_heap_scan.children.clone(),
+            PlanNode::BitmapIndexScan(_) => None,
+            PlanNode::BitmapOr(bitmap_or) => bitmap_or.children.clone(),
+            PlanNode::BitmapAnd(bitmap_and) => bitmap_and.children.clone(),
+            PlanNode::SampleScan(_) => None,
+            PlanNode::WorkTableScan(_) => None,
+            PlanNode::CteScan(_) => None,
+            PlanNode::RecursiveUnion(recursive_union) => recursive_union.children.clone(),
+            PlanNode::MergeAppend(merge_append) => merge_append.children.clone(),
+            PlanNode::FunctionScan(function_scan) => function_scan.children.clone(),
+            PlanNode::ProjectSet(project_set) => project_set.children.clone(),
         }
     }
 }
@@ -407,16 +547,28 @@ pub enum ScanNode {
     IndexOnlyScan(IndexOnlyScan),
     ValueScan(ValueScan),
     SubqueryScan(SubqueryScan),
+    BitmapHeapScan(BitmapHeapScan),
+    BitmapIndexScan(BitmapIndexScan),
+    SampleScan(SampleScan),
+    WorkTableScan(WorkTableScan),
+    CteScan(CteScan),
+    FunctionScan(FunctionScan),
 }
 
 impl ScanNode {
-    pub fn get_alias(&self) -> Option<String> {
+    pub fn get_alias(&self) -> String {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.alias.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.alias.clone(),
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.alias.clone(),
             ScanNode::ValueScan(value_scan) => value_scan.alias.clone(),
             ScanNode::SubqueryScan(subquery_scan) => subquery_scan.alias.clone(),
+            ScanNode::BitmapHeapScan(bitmap_heap_scan) => bitmap_heap_scan.alias.clone(),
+            ScanNode::BitmapIndexScan(_) => "".to_string(),
+            ScanNode::SampleScan(sample_scan) => sample_scan.alias.clone(),
+            ScanNode::WorkTableScan(work_table_scan) => work_table_scan.alias.clone(),
+            ScanNode::CteScan(cte_scan) => cte_scan.alias.clone(),
+            ScanNode::FunctionScan(function_scan) => function_scan.alias.clone(),
         }
     }
 
@@ -427,19 +579,28 @@ impl ScanNode {
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.filter.clone(),
             ScanNode::ValueScan(value_scan) => value_scan.filter.clone(),
             ScanNode::SubqueryScan(subquery_scan) => subquery_scan.filter.clone(),
+            ScanNode::BitmapHeapScan(bitmap_heap_scan) => bitmap_heap_scan.filter.clone(),
+            ScanNode::BitmapIndexScan(_) => None,
+            ScanNode::SampleScan(sample_scan) => sample_scan.filter.clone(),
+            ScanNode::WorkTableScan(work_table_scan) => work_table_scan.filter.clone(),
+            ScanNode::CteScan(cte_scan) => cte_scan.filter.clone(),
+            ScanNode::FunctionScan(function_scan) => function_scan.filter.clone(),
         }
     }
 
-    pub fn get_relation_name(&self) -> String {
+    pub fn get_relation_name(&self) -> Option<String> {
         match self {
             ScanNode::SeqScan(seq_scan) => seq_scan.relation_name.clone(),
             ScanNode::IndexScan(index_scan) => index_scan.relation_name.clone(),
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.relation_name.clone(),
-            // ValueScan and SubqueryScan Node does not have a relation_name, use alias as a replacement
-            ScanNode::ValueScan(value_scan) => value_scan.alias.clone().unwrap_or_default(),
-            ScanNode::SubqueryScan(subquery_scan) => {
-                subquery_scan.alias.clone().unwrap_or_default()
-            }
+            ScanNode::ValueScan(_) => None,
+            ScanNode::SubqueryScan(_) => None,
+            ScanNode::BitmapHeapScan(bitmap_heap_scan) => bitmap_heap_scan.relation_name.clone(),
+            ScanNode::BitmapIndexScan(_) => None,
+            ScanNode::SampleScan(sample_scan) => sample_scan.relation_name.clone(),
+            ScanNode::WorkTableScan(work_table_scan) => work_table_scan.cte_name.clone(),
+            ScanNode::CteScan(cte_scan) => cte_scan.cte_name.clone(),
+            ScanNode::FunctionScan(function_scan) => function_scan.function_name.clone(),
         }
     }
 
@@ -450,6 +611,13 @@ impl ScanNode {
             ScanNode::IndexOnlyScan(index_only_scan) => Some(index_only_scan.index_name.clone()),
             ScanNode::ValueScan(_) => None,
             ScanNode::SubqueryScan(_) => None,
+            ScanNode::BitmapHeapScan(_) => None,
+            ScanNode::BitmapIndexScan(bitmap_index_scan) => Some(bitmap_index_scan.index_name.clone()),
+            ScanNode::SampleScan(_) => None,
+            ScanNode::WorkTableScan(_) => None,
+            ScanNode::CteScan(_) => None,
+            ScanNode::FunctionScan(_) => None,
+
         }
     }
 
@@ -460,6 +628,12 @@ impl ScanNode {
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.output.clone(),
             ScanNode::ValueScan(value_scan) => value_scan.output.clone(),
             ScanNode::SubqueryScan(subquery_scan) => subquery_scan.output.clone(),
+            ScanNode::BitmapHeapScan(bitmap_heap_scan) => bitmap_heap_scan.output.clone(),
+            ScanNode::BitmapIndexScan(bitmap_index_scan) => bitmap_index_scan.output.clone(),
+            ScanNode::SampleScan(sample_scan) => sample_scan.output.clone(),
+            ScanNode::WorkTableScan(work_table_scan) => work_table_scan.output.clone(),
+            ScanNode::CteScan(cte_scan) => cte_scan.output.clone(),
+            ScanNode::FunctionScan(function_scan) => function_scan.output.clone(),
         }
     }
 
@@ -470,6 +644,12 @@ impl ScanNode {
             ScanNode::IndexOnlyScan(index_only_scan) => index_only_scan.actual_rows,
             ScanNode::ValueScan(value_scan) => value_scan.actual_rows,
             ScanNode::SubqueryScan(subquery_scan) => subquery_scan.actual_rows,
+            ScanNode::BitmapHeapScan(bitmap_heap_scan) => bitmap_heap_scan.actual_rows,
+            ScanNode::BitmapIndexScan(bitmap_index_scan) => bitmap_index_scan.actual_rows,
+            ScanNode::SampleScan(sample_scan) => sample_scan.actual_rows,
+            ScanNode::WorkTableScan(work_table_scan) => work_table_scan.actual_rows,
+            ScanNode::CteScan(cte_scan) => cte_scan.actual_rows,
+            ScanNode::FunctionScan(function_scan) => function_scan.actual_rows,
         }
     }
 }
@@ -598,6 +778,7 @@ impl JoinNode {
 pub enum SetNode {
     Append(Append),
     SetOp(SetOp),
+    MergeAppend(MergeAppend),
 }
 
 impl SetNode {
@@ -605,6 +786,7 @@ impl SetNode {
         match self {
             SetNode::Append(append) => append.children.clone(),
             SetNode::SetOp(set_op) => set_op.children.clone(),
+            SetNode::MergeAppend(merge_append) => merge_append.children.clone(),
         }
     }
 
@@ -612,12 +794,14 @@ impl SetNode {
         match self {
             SetNode::Append(append) => append.children = Some(children),
             SetNode::SetOp(set_op) => set_op.children = Some(children),
+            SetNode::MergeAppend(merge_append) => merge_append.children = Some(children),
         }
     }
 
     pub fn get_operator(&self) -> SetOperator {
         match self {
             SetNode::Append(_) => SetOperator::Union,
+            SetNode::MergeAppend(_) => SetOperator::Union,
             SetNode::SetOp(set_op) => match set_op.command.as_deref() {
                 Some("Intersect") | Some("Intersect All") => SetOperator::Intersect,
                 Some("Except") | Some("Except All") => SetOperator::Except,
@@ -649,6 +833,15 @@ pub struct Append {
     pub children: Option<Vec<PlanNode>>,
 }
 #[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MergeAppend {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Sort Key")]
+    pub sort_key: Option<Vec<String>>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Gather {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
@@ -661,7 +854,6 @@ pub struct Gather {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-
 pub struct GatherMerge {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
@@ -672,7 +864,6 @@ pub struct GatherMerge {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-
 pub struct Memoize {
     #[serde(rename = "Parent Relationship")]
     pub parent_relationship: Option<String>,
@@ -694,6 +885,54 @@ pub struct LockRows {
     pub children: Option<Vec<PlanNode>>,
     #[serde(rename = "Output")]
     pub output: Option<Vec<String>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BitmapOr {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct BitmapAnd {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Relation Name")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct RecursiveUnion {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Subplan Name")]
+    pub subplan_name: String,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ProjectSet {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plan Rows")]
+    pub plan_rows: Option<i64>,
+    #[serde(rename = "Actual Rows")]
+    pub actual_rows: Option<i64>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -720,6 +959,7 @@ mod test_parse_json {
     use test_each_file::test_each_path;
     fn test_input_plan(input_path: &std::path::Path) {
         let result = PlanRoot::from_json(input_path.to_str().unwrap()).unwrap();
+        println!();
         println!("{:#?}", result)
     }
 

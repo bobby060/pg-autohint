@@ -1,0 +1,1 @@
+SELECT * FROM title_ratings TABLESAMPLE SYSTEM (1);

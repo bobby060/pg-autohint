@@ -125,7 +125,7 @@ impl Visit for ScanNode {
         };
 
         // parse table
-        let table = build_base_table(&self.get_relation_name(), self.get_alias())?;
+        let table = build_base_table(self.get_relation_name(), self.get_alias())?;
         from.push(table);
 
         if let ScanNode::IndexOnlyScan(index_only_scan) = &self {
@@ -453,13 +453,15 @@ fn parse_projections(output: Vec<String>) -> Result<Vec<SelectItem>, String> {
 /// * `alias`: The alias of the table
 ///
 /// # Returns a TableWithJoins struct
-fn build_base_table(relation_name: &str, alias: Option<String>) -> Result<TableWithJoins, String> {
+fn build_base_table(relation_name: Option<String>, alias: String) -> Result<TableWithJoins, String> {
     Ok(TableWithJoins {
         joins: vec![],
         relation: TableFactor::Table {
-            name: ObjectName::from_str(relation_name)?,
-            alias: match alias {
-                Some(alias) => {
+            name: match &relation_name {
+                Some(name) => ObjectName::from_str(name)?,
+                None => ObjectName::from_str(&alias)?,
+            },
+            alias: {
                     let ident = match parse_expr(alias.as_str()) {
                         Ok(Expr::Identifier(ident)) => ident,
                         _ => {
@@ -473,8 +475,6 @@ fn build_base_table(relation_name: &str, alias: Option<String>) -> Result<TableW
                         name: ident,
                         columns: vec![],
                     })
-                }
-                None => None,
             },
             args: None,
             with_hints: vec![],
@@ -546,8 +546,8 @@ mod test_visit_nodes {
         // constuct the PlanNode as if it was created via postgres2plan, also notice the parenthesis
         let scan_node = ScanNode::SeqScan(SeqScan {
             parent_relationship: Some("Outer".to_string()),
-            relation_name: "title_basics".to_string(),
-            alias: Some("t1".to_string()),
+            relation_name: Some("title_basics".to_string()),
+            alias: "t1".to_string(),
             filter: Some("(runtimeminutes < 25)".to_string()),
             actual_rows: None,
             plan_rows: None,
@@ -573,14 +573,14 @@ mod test_visit_nodes {
     // visit gather node should ignore it, returning the visit result of its only children
     #[test]
     fn test_visit_gather() {
-        let test_query = "SELECT tconst FROM title_basics WHERE (runtimeminutes < 25)";
+        let test_query = "SELECT tconst FROM title_basics AS title_basics WHERE (runtimeminutes < 25)";
         let test_ast = parse_query(test_query).unwrap().body;
         let scan_node = SeqScan {
             parent_relationship: Some("Outer".to_string()),
-            relation_name: "title_basics".to_string(),
+            relation_name: Some("title_basics".to_string()),
             actual_rows: None,
             plan_rows: None,
-            alias: None,
+            alias: "title_basics".to_string(),
             filter: Some("(runtimeminutes < 25)".to_string()),
             output: Some(vec!["tconst".to_string()]),
         };

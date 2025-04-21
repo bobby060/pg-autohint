@@ -50,6 +50,7 @@ psql -U postgres -d imdb -c "CREATE INDEX title_ratings_pkey ON title_ratings (t
 psql -U postgres -d imdb -c "CREATE INDEX title_crew_pkey ON title_crew (tconst);"
 psql -U postgres -d imdb -c "CREATE INDEX name_basics_pkey ON name_basics (nconst);"
 psql -U postgres -d imdb -c "CREATE INDEX num_votes_idx ON title_ratings (num_votes);"
+<<<<<<< HEAD
 # psql -U postgres -d imdb -c "CREATE INDEX episode_idx ON title_episode (parenttconst);"
 # psql -U postgres -d imdb -c "CREATE INDEX episode_pkey ON title_episode (const);"
 
@@ -68,6 +69,9 @@ psql -U postgres -d imdb -c "ANALYZE orders_test;"
 
 
 
+=======
+psql -U postgres -d imdb -c "CREATE INDEX average_rating_idx ON title_ratings (average_rating);"
+>>>>>>> 14f37ab (1. Added new Postgres node types: BitmapHeapScan, BitmapIndexScan, SampleScan, WorkTableScan, CteScan, FunctionScan, BitmapOr, BitmapAnd, RecursiveUnion, ProjectSet.)
 printf "Done! \n"
 
 printf "Script done at %s. \n" "$(date)"

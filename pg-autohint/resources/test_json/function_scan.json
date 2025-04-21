@@ -1,0 +1,200 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Sort",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Startup Cost": 232125.04,
+      "Total Cost": 232125.54,
+      "Plan Rows": 200,
+      "Plan Width": 40,
+      "Output": [
+        "(unnest(string_to_array(title_basics.genres, ','::text)))",
+        "(count(*))"
+      ],
+      "Sort Key": [
+        "(count(*)) DESC"
+      ],
+      "Plans": [
+        {
+          "Node Type": "Aggregate",
+          "Strategy": "Sorted",
+          "Partial Mode": "Finalize",
+          "Parent Relationship": "Outer",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 232066.73,
+          "Total Cost": 232117.40,
+          "Plan Rows": 200,
+          "Plan Width": 40,
+          "Output": [
+            "(unnest(string_to_array(title_basics.genres, ','::text)))",
+            "count(*)"
+          ],
+          "Group Key": [
+            "(unnest(string_to_array(title_basics.genres, ','::text)))"
+          ],
+          "Plans": [
+            {
+              "Node Type": "Gather Merge",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Startup Cost": 232066.73,
+              "Total Cost": 232113.40,
+              "Plan Rows": 400,
+              "Plan Width": 40,
+              "Output": [
+                "(unnest(string_to_array(title_basics.genres, ','::text)))",
+                "(PARTIAL count(*))"
+              ],
+              "Workers Planned": 2,
+              "Plans": [
+                {
+                  "Node Type": "Sort",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 231066.71,
+                  "Total Cost": 231067.21,
+                  "Plan Rows": 200,
+                  "Plan Width": 40,
+                  "Output": [
+                    "(unnest(string_to_array(title_basics.genres, ','::text)))",
+                    "(PARTIAL count(*))"
+                  ],
+                  "Sort Key": [
+                    "(unnest(string_to_array(title_basics.genres, ','::text)))"
+                  ],
+                  "Plans": [
+                    {
+                      "Node Type": "Aggregate",
+                      "Strategy": "Hashed",
+                      "Partial Mode": "Partial",
+                      "Parent Relationship": "Outer",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Startup Cost": 231057.06,
+                      "Total Cost": 231059.06,
+                      "Plan Rows": 200,
+                      "Plan Width": 40,
+                      "Output": [
+                        "(unnest(string_to_array(title_basics.genres, ','::text)))",
+                        "PARTIAL count(*)"
+                      ],
+                      "Group Key": [
+                        "unnest(string_to_array(title_basics.genres, ','::text))"
+                      ],
+                      "Planned Partitions": 0,
+                      "Plans": [
+                        {
+                          "Node Type": "ProjectSet",
+                          "Parent Relationship": "Outer",
+                          "Parallel Aware": false,
+                          "Async Capable": false,
+                          "Startup Cost": 0.25,
+                          "Total Cost": 229958.61,
+                          "Plan Rows": 219690,
+                          "Plan Width": 32,
+                          "Output": [
+                            "unnest(string_to_array(title_basics.genres, ','::text))"
+                          ],
+                          "Plans": [
+                            {
+                              "Node Type": "Hash Join",
+                              "Parent Relationship": "Outer",
+                              "Parallel Aware": false,
+                              "Async Capable": false,
+                              "Join Type": "Semi",
+                              "Startup Cost": 0.25,
+                              "Total Cost": 228640.47,
+                              "Plan Rows": 21969,
+                              "Plan Width": 12,
+                              "Output": [
+                                "title_basics.genres"
+                              ],
+                              "Inner Unique": false,
+                              "Hash Cond": "(title_basics.startyear = generate_series.generate_series)",
+                              "Plans": [
+                                {
+                                  "Node Type": "Seq Scan",
+                                  "Parent Relationship": "Outer",
+                                  "Parallel Aware": true,
+                                  "Async Capable": false,
+                                  "Relation Name": "title_basics",
+                                  "Schema": "public",
+                                  "Alias": "title_basics",
+                                  "Startup Cost": 0.00,
+                                  "Total Cost": 227616.31,
+                                  "Plan Rows": 296956,
+                                  "Plan Width": 14,
+                                  "Output": [
+                                    "title_basics.tconst",
+                                    "title_basics.titletype",
+                                    "title_basics.primarytitle",
+                                    "title_basics.originaltitle",
+                                    "title_basics.isadult",
+                                    "title_basics.startyear",
+                                    "title_basics.endyear",
+                                    "title_basics.runtimeminutes",
+                                    "title_basics.genres"
+                                  ],
+                                  "Filter": "(title_basics.titletype = 'movie'::text)"
+                                },
+                                {
+                                  "Node Type": "Hash",
+                                  "Parent Relationship": "Inner",
+                                  "Parallel Aware": false,
+                                  "Async Capable": false,
+                                  "Startup Cost": 0.11,
+                                  "Total Cost": 0.11,
+                                  "Plan Rows": 11,
+                                  "Plan Width": 4,
+                                  "Output": [
+                                    "generate_series.generate_series"
+                                  ],
+                                  "Plans": [
+                                    {
+                                      "Node Type": "Function Scan",
+                                      "Parent Relationship": "Outer",
+                                      "Parallel Aware": false,
+                                      "Async Capable": false,
+                                      "Function Name": "generate_series",
+                                      "Schema": "pg_catalog",
+                                      "Alias": "generate_series",
+                                      "Startup Cost": 0.00,
+                                      "Total Cost": 0.11,
+                                      "Plan Rows": 11,
+                                      "Plan Width": 4,
+                                      "Output": [
+                                        "generate_series.generate_series"
+                                      ],
+                                      "Function Call": "generate_series(2010, 2020)"
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "JIT": {
+      "Functions": 19,
+      "Options": {
+        "Inlining": false,
+        "Optimization": false,
+        "Expressions": true,
+        "Deforming": true
+      }
+    }
+  }
+]

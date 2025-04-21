@@ -31,7 +31,7 @@ impl PgHintList {
         self.0.extend(hint_list.0);
     }
 
-    //// Concat hint list with sql string
+    //// Get the length of the hint list
     //// Returns:
     //// - length of the hint list
     pub fn size(&self) -> usize {

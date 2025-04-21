@@ -1,0 +1,150 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Merge Append",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Startup Cost": 55611.39,
+      "Total Cost": 59414.27,
+      "Plan Rows": 304230,
+      "Plan Width": 20,
+      "Sort Key": [
+        "title_ratings.num_votes DESC"
+      ],
+      "Subplans Removed": 0,
+      "Plans": [
+        {
+          "Node Type": "Sort",
+          "Parent Relationship": "Member",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 1402.86,
+          "Total Cost": 1403.13,
+          "Plan Rows": 108,
+          "Plan Width": 20,
+          "Output": [
+            "title_ratings.tconst",
+            "title_ratings.average_rating",
+            "title_ratings.num_votes"
+          ],
+          "Sort Key": [
+            "title_ratings.num_votes DESC"
+          ],
+          "Plans": [
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "title_ratings",
+              "Schema": "public",
+              "Alias": "title_ratings",
+              "Startup Cost": 999.43,
+              "Total Cost": 1399.22,
+              "Plan Rows": 108,
+              "Plan Width": 20,
+              "Output": [
+                "title_ratings.tconst",
+                "title_ratings.average_rating",
+                "title_ratings.num_votes"
+              ],
+              "Recheck Cond": "((title_ratings.num_votes > 500000) AND (title_ratings.average_rating < 4.0))",
+              "Plans": [
+                {
+                  "Node Type": "BitmapAnd",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Startup Cost": 999.43,
+                  "Total Cost": 999.43,
+                  "Plan Rows": 108,
+                  "Plan Width": 0,
+                  "Plans": [
+                    {
+                      "Node Type": "Bitmap Index Scan",
+                      "Parent Relationship": "Member",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Index Name": "num_votes_idx",
+                      "Startup Cost": 0.00,
+                      "Total Cost": 36.58,
+                      "Plan Rows": 3220,
+                      "Plan Width": 0,
+                      "Index Cond": "(title_ratings.num_votes > 500000)"
+                    },
+                    {
+                      "Node Type": "Bitmap Index Scan",
+                      "Parent Relationship": "Member",
+                      "Parallel Aware": false,
+                      "Async Capable": false,
+                      "Index Name": "average_rating_idx",
+                      "Startup Cost": 0.00,
+                      "Total Cost": 962.55,
+                      "Plan Rows": 52016,
+                      "Plan Width": 0,
+                      "Index Cond": "(title_ratings.average_rating < 4.0)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "Node Type": "Sort",
+          "Parent Relationship": "Member",
+          "Parallel Aware": false,
+          "Async Capable": false,
+          "Startup Cost": 54208.52,
+          "Total Cost": 54968.82,
+          "Plan Rows": 304122,
+          "Plan Width": 20,
+          "Output": [
+            "title_ratings_1.tconst",
+            "title_ratings_1.average_rating",
+            "title_ratings_1.num_votes"
+          ],
+          "Sort Key": [
+            "title_ratings_1.num_votes DESC"
+          ],
+          "Plans": [
+            {
+              "Node Type": "Bitmap Heap Scan",
+              "Parent Relationship": "Outer",
+              "Parallel Aware": false,
+              "Async Capable": false,
+              "Relation Name": "title_ratings",
+              "Schema": "public",
+              "Alias": "title_ratings_1",
+              "Startup Cost": 5761.20,
+              "Total Cost": 20274.69,
+              "Plan Rows": 304122,
+              "Plan Width": 20,
+              "Output": [
+                "title_ratings_1.tconst",
+                "title_ratings_1.average_rating",
+                "title_ratings_1.num_votes"
+              ],
+              "Recheck Cond": "(title_ratings_1.average_rating > 8.0)",
+              "Filter": "(title_ratings_1.num_votes < 10000)",
+              "Plans": [
+                {
+                  "Node Type": "Bitmap Index Scan",
+                  "Parent Relationship": "Outer",
+                  "Parallel Aware": false,
+                  "Async Capable": false,
+                  "Index Name": "average_rating_idx",
+                  "Startup Cost": 0.00,
+                  "Total Cost": 5685.17,
+                  "Plan Rows": 307299,
+                  "Plan Width": 0,
+                  "Index Cond": "(title_ratings_1.average_rating > 8.0)"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  }
+]

@@ -1,0 +1,25 @@
+[
+  {
+    "Plan": {
+      "Node Type": "Sample Scan",
+      "Parallel Aware": false,
+      "Async Capable": false,
+      "Relation Name": "title_ratings",
+      "Schema": "public",
+      "Alias": "title_ratings",
+      "Startup Cost": 0.00,
+      "Total Cost": 550.81,
+      "Plan Rows": 15481,
+      "Plan Width": 20,
+      "Output": [
+        "tconst",
+        "average_rating",
+        "num_votes"
+      ],
+      "Sampling Method": "system",
+      "Sampling Parameters": [
+        "'1'::real"
+      ]
+    }
+  }
+]

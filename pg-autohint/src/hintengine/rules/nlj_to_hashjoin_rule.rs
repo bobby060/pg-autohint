@@ -1,7 +1,6 @@
 use crate::{
     hintengine::rule::Rule,
-    model::hints::{PgHint, PgHintList},
-    model::postgresplan::{JoinNode, PlanNode, ScanNode},
+    model::{hints::{PgHint, PgHintList}, postgresplan::{JoinNode, PlanNode, ScanNode}},
 };
 
 /// NljToHashJoin rule that requires analyze
@@ -93,7 +92,11 @@ impl NljToHashJoin {
             PlanNode::IndexScan(index_scan) => self.get_scan(ScanNode::IndexScan(index_scan)),
             PlanNode::IndexOnlyScan(index_only_scan) => {
                 self.get_scan(ScanNode::IndexOnlyScan(index_only_scan))
-            }
+            },
+            // pg_hint_plan only supports queries with one VALUES, which can be hinted as *VALUES*
+            PlanNode::ValueScan(value_scan) => self.get_scan(ScanNode::ValueScan(value_scan)),
+            PlanNode::CteScan(cte_scan) => self.get_scan(ScanNode::CteScan(cte_scan)),
+            PlanNode::FunctionScan(function_scan) => self.get_scan(ScanNode::FunctionScan(function_scan)),
             _ => {
                 // if not join or scan nodes, visit children
                 let children = plan.get_children();
@@ -123,10 +126,10 @@ impl NljToHashJoin {
         joins
     }
 
-    /// return the relation name for constructing hints for the joins above
+    /// return the alias for constructing hints for the joins above,
+    /// which can be recognized by pg_hint_plan
     fn get_scan(&mut self, scan_node: ScanNode) -> String {
-        let rel_name = scan_node.get_relation_name();
-        rel_name
+        scan_node.get_alias()
     }
 }
 
