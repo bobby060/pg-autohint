@@ -22,7 +22,13 @@ pub fn establish_connection(
         "postgres://{}:{}@{}:{}/{}",
         user, password, host, port, db_name
     );
-    Client::connect(&database_url, NoTls).expect(&format!("Error connecting to {}", database_url))
+    let mut client = Client::connect(&database_url, NoTls)
+        .expect(&format!("Error connecting to {}", database_url));
+    let result = client.execute("LOAD 'pg_hint_plan'", &[]);
+    if result.is_err() {
+        println!("Error loading pg_hint_plan");
+    }
+    client
 }
 
 #[cfg(test)]

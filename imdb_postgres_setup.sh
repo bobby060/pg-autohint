@@ -50,6 +50,23 @@ psql -U postgres -d imdb -c "CREATE INDEX title_ratings_pkey ON title_ratings (t
 psql -U postgres -d imdb -c "CREATE INDEX title_crew_pkey ON title_crew (tconst);"
 psql -U postgres -d imdb -c "CREATE INDEX name_basics_pkey ON name_basics (nconst);"
 psql -U postgres -d imdb -c "CREATE INDEX num_votes_idx ON title_ratings (num_votes);"
+# psql -U postgres -d imdb -c "CREATE INDEX episode_idx ON title_episode (parenttconst);"
+# psql -U postgres -d imdb -c "CREATE INDEX episode_pkey ON title_episode (const);"
+
+
+# Set up test case for index selection rule example
+printf "Creating test case for index selection rule example \n"
+
+# https://pganalyze.com/blog/5mins-postgres-planner-order-by-limit
+# 
+psql -U postgres -d imdb -c "CREATE TABLE orders_test(order_id int not null, shipping_date date not null,    PRIMARY KEY (order_id));"
+psql -U postgres -d imdb -c "INSERT INTO orders_test SELECT generate_series(1, 2000000), '2018-01-01'::timestamp + random() * ('2022-05-01'::timestamp - '2018-01-01'::timestamp);"
+psql -U postgres -d imdb -c "CREATE INDEX ON orders_test(shipping_date, order_id);"
+psql -U postgres -d imdb -c "INSERT INTO orders_test SELECT generate_series(2000001, 2100000), '2022-05-01';"
+psql -U postgres -d imdb -c "ANALYZE orders_test;"
+
+
+
 
 printf "Done! \n"
 
