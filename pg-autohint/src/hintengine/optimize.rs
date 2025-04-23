@@ -4,7 +4,7 @@ use crate::model::{
     postgresplan::PlanRoot,
     query::{Query, TimeOut},
 };
-use postgres::Client;
+use postgres::{Client, GenericClient};
 
 /// Optimizer struct
 ///
@@ -35,6 +35,10 @@ impl Optimizer {
     /// * `add_hint_table`: Whether the generated hints should be added to hint table
     /// * `hint_table_app_name`: only used when `add_hint_table` is true. optional, the value of application_name where sessions can apply a hint. 
     /// if not specified, hint will enabled to all applications
+    /// * `is_analyze`: Whether the query would be executed via EXPLAIN ANALYZE
+    /// * `add_hint_table`: Whether the generated hints should be added to hint table
+    /// * `hint_table_app_name`: only used when `add_hint_table` is true. optional, the value of application_name where sessions can apply a hint. 
+    /// if not specified, hint will enabled to all applications
     ///
     /// # Returns
     ///
@@ -44,6 +48,8 @@ impl Optimizer {
         sql: &str,
         conn: &mut Client,
         is_analyze: bool,
+        add_hint_table: bool,
+        hint_table_app_name: Option<&str>,
         add_hint_table: bool,
         hint_table_app_name: Option<&str>,
     ) -> Result<Query, String> {
@@ -186,6 +192,7 @@ mod test_optimizer {
 
         let sql = "SELECT * FROM title_basics";
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+        let new_sql = optimizer.optimize(sql, &mut conn, false, false, None);
         let new_sql = optimizer.optimize(sql, &mut conn, false, false, None);
 
         assert_eq!(new_sql.unwrap().get_original_sql(), sql);
