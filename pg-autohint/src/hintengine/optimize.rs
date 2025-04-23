@@ -4,7 +4,7 @@ use crate::model::{
     postgresplan::PlanRoot,
     query::{Query, TimeOut},
 };
-use postgres::{Client, GenericClient};
+use postgres::Client;
 
 /// Optimizer struct
 ///
@@ -52,14 +52,17 @@ impl Optimizer {
         let mut query_id = None;
         if add_hint_table {
             // if query_id is None, send a warning that hint table will not be used because no query id is parsed
+            conn.execute("SET pg_hint_plan.enable_hint_table='on'", &[]).unwrap();
             query_id = plan.query_id.clone();
+        } else {
+            conn.execute("SET pg_hint_plan.enable_hint_table='off'", &[]).unwrap();
         }
         let hints: PgHintList = self.apply_rules(plan);
         if add_hint_table {
             match query_id {
                 Some(id) => {
                     let application_name = hint_table_app_name.unwrap_or_else(|| "");
-                    self.add_hint_table(conn, id, application_name, &hints.to_string());
+                    self.add_hint_table(conn, id, application_name, &&hints.to_hint_table_string());
                 }
                 None => {
                     eprint!("Warning: Hint table will not be used for query because no query ID is parsed: {}.\n
@@ -81,6 +84,19 @@ impl Optimizer {
         self.rules.push(rule);
     }
 
+    /// clear all hints in the hint table hint_plan.hints
+    /// 
+    /// # Arguments
+    /// 
+    /// * `conn`: The postgres connection
+    pub fn clear_hint_table(&mut self, conn: &mut Client) {
+    conn.execute("TRUNCATE TABLE hint_plan.hints", &[])
+        .unwrap_or_else(|e| {
+            eprintln!("Failed to truncate hint_plan.hints table: {}", e.to_string());
+            0
+        });
+    }
+
     /// add a hint to the hint table
     /// 
     /// # Arguments
@@ -90,6 +106,7 @@ impl Optimizer {
     /// * `application_name`: optional, the value of application_name where sessions can apply a hint. if not specified, hint will apply to all applications
     fn add_hint_table(&mut self, conn: &mut Client, query_id: i64, application_name: &str, hints: &str) {
         let query = self.add_hint_table_query(query_id, application_name, hints);
+        // TODO: fix when hint is already there!
         conn.execute(&query, &[]).unwrap_or_else(|e| {
             eprintln!("Failed to insert into hint table: {}", e.to_string());
             0
@@ -209,8 +226,33 @@ mod test_optimizer {
         let application_name = "";
         let hints = "SeqScan(t1)";
         assert!(optimizer.add_hint_table_query(query_id, application_name, hints)
-        .eq("INSERT INTO hint_plan.hints(query_id, application_name, hints) VALUES (-7164653396197960701, '', 'SeqScan(t1)');"))
+        .eq("INSERT INTO hint_plan.hints(query_id, application_name, hints) VALUES (-7164653396197960701, '', 'SeqScan(t1)');"));
     }
+
+    #[test]
+    fn test_run_hint_table_query() {
+        let mut optimizer = Optimizer::new();
+        optimizer.add_rule(Box::new(NljToHashJoin::new(1.0, 1000)));
+        let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+        // clear hints
+        optimizer.clear_hint_table(&mut conn);
+        let application_name = Some("");
+        let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
+            .expect("Failed to read input file");
+        // insert hints into hint table
+        let result = optimizer.optimize(&sql, &mut conn, true, true, application_name).unwrap();
+        assert_eq!(result.get_hints().unwrap().size(), 2, "expected 2 hints, got {}", result.get_hints().unwrap().size());
+        // run query again, should have hints applied
+        let query = Query::new(sql.to_string(), None, optimizer.default_timeout.clone());
+        let plan = query.get_plan(&mut conn, false).unwrap();
+        // assert HashJoin is in plan
+        assert!(
+            format!("{:#?}", plan.plan).contains("HashJoin"),
+            "Expected HashJoin in the plan, but it was not found. Plan: {:#?}",
+            plan
+        );
+    }
+
 }
 
 

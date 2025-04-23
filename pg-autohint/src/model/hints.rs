@@ -37,6 +37,13 @@ impl PgHintList {
     pub fn size(&self) -> usize {
         self.0.len()
     }
+
+    //// output hints concatenated by space, used for hint table
+    //// Returns:
+    //// - string of hints concatenated by space
+    pub fn to_hint_table_string(&self) -> String {
+        self.0.iter().map(|h| h.to_string()).collect::<Vec<_>>().join(" ")
+    }
 }
 
 impl fmt::Display for PgHintList {
