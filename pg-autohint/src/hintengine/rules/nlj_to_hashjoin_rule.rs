@@ -128,7 +128,7 @@ impl NljToHashJoin {
 
     /// return the relation name for constructing hints for the joins above
     fn get_scan(&mut self, scan_node: ScanNode) -> String {
-        let rel_name = scan_node.get_relation_name();
+        let rel_name = scan_node.get_alias().unwrap_or_else(|| "".to_string());
         rel_name
     }
 }
