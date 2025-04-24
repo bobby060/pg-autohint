@@ -30,8 +30,15 @@ fn main() {
             let query = std::fs::read_to_string(entry.path())
                 .expect("Failed to read SQL file");
             println!("Optimizing query from file: {:?}", entry.path());
-            if let Err(e) = run_optimize(&mut conn, &mut optimizer, &query) {
-                eprintln!("Error optimizing query {:?}: {}", entry.path().to_str(), e);
+            match run_optimize(&mut conn, &mut optimizer, &query) {
+                Ok(result) => {
+                    if result.get_hints().is_none() || result.get_hints().is_some_and(|x| x.size()==0) {
+                        eprintln!("Warning query {:?}: produced no hints", entry.path().to_str());
+                    }
+                }
+                Err(e) => {
+                    eprintln!("Error optimizing query {:?}: {}", entry.path().to_str(), e);
+                }
             }
         }
     }
