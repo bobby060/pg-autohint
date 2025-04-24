@@ -14,14 +14,17 @@ fn main() {
 
     let mut conn = establish_connection("imdbload", "postgres", "postgres", "localhost", "5432");
 
-    let mut optimizer = Optimizer::new();
-    optimizer.init_hint_table(&mut conn);
-    optimizer.add_rule(Box::new(rules::NljToHashJoin::new(1.0, 1500)));
-    optimizer.add_rule(Box::new(rules::CardCorrection::new(1.0)));
-
+    // clear hint table before run
+    let mut opt = Optimizer::new();
+    opt.init_hint_table(&mut conn);
 
     let query_files = std::fs::read_dir(query_path).expect("Failed to read query directory");
     for entry in query_files {
+        // use new optimizer to clear the states between queries
+        let mut optimizer = Optimizer::new();
+        optimizer.add_rule(Box::new(rules::NljToHashJoin::new(1.0, 1500)));
+        optimizer.add_rule(Box::new(rules::CardCorrection::new(1.0)));
+
         let entry = entry.expect("Failed to read directory entry");
         if entry.path().extension().and_then(|ext| ext.to_str()) == Some("sql") {
             let query = std::fs::read_to_string(entry.path())
