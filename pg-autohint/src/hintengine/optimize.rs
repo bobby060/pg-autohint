@@ -194,7 +194,7 @@ mod test_optimizer {
     /// test CardCorrection rule on two NLJs
     #[test]
     fn test_card_correction() {
-        let card_correction_rule = CardCorrection::new(1.0);
+        let card_correction_rule = CardCorrection::new();
 
         // in this test, one NLJ has very large plan rows and one have actual rows larger than plan rows
         // expected behavior is two hashjoin hints

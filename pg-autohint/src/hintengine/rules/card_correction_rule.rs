@@ -9,7 +9,6 @@ use crate::{
 
 /// NljToHashJoin rule that requires analyze
 pub struct CardCorrection {
-    card_multiplier: f64,
     pg_hint_list: PgHintList,
 }
 
@@ -25,26 +24,20 @@ impl Rule for CardCorrection {
 }
 
 impl CardCorrection {
-    pub fn new(card_multiplier: f64) -> Self {
+    pub fn new() -> Self {
         CardCorrection {
-            card_multiplier: card_multiplier,
             pg_hint_list: PgHintList::new(),
         }
     }
 
-    // TODO: the actual cardinality of join is one in the `Gather` node above it. Parallel execution causes the
-    // actual_rows in join nodes to be low
-    // Ad hoc solution is to multiply card by self.card_multiplier that is multiplied by the number of workers launched
-    // in Gather nodes
     fn correct_join_card(&mut self, join_node: JoinNode, joins: String) {
         let actual_rows = join_node.get_card();
         let actual_rows = actual_rows.unwrap();
         let actual_rows = if actual_rows == 0 { 1 } else { actual_rows };
 
-        let adjust_rows = (actual_rows as f64 * self.card_multiplier) as i64;
         self.pg_hint_list.add_hint(PgHint::CardCorrection {
             tables: joins,
-            card: adjust_rows,
+            card: actual_rows,
         });
     }
 
@@ -109,7 +102,7 @@ mod test_card_correction_rule {
 
     #[test]
     fn test_apply() {
-        let mut card_correction_rule = CardCorrection::new(1.0);
+        let mut card_correction_rule = CardCorrection::new();
 
         // in this test, one NLJ has very large plan rows and one have actual rows larger than plan rows
         // expected behavior is two hashjoin hints
