@@ -58,10 +58,11 @@ psql -c "ALTER SYSTEM SET from_collapse_limit = 20"
 psql -c "ALTER SYSTEM SET join_collapse_limit = 20"
 psql -c "ALTER SYSTEM SET max_worker_processes = 32"
 #psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
-psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.00001"
+psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
 psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
 psql -c "ALTER SYSTEM SET min_parallel_table_scan_size = 0"
 psql -c "ALTER SYSTEM SET min_parallel_index_scan_size = 0"
+psql -c "ALTER SYSTEM SET max_parallel_workers = 32"
 psql -c "ALTER SYSTEM SET effective_cache_size = '32GB'"
 psql -c "ALTER SYSTEM SET geqo_threshold=18"
 psql -c "ALTER SYSTEM SET shared_buffers='4GB'"
@@ -80,6 +81,9 @@ psql -c "ALTER SYSTEM SET pg_stat_statements.track = 'top'"
 psql -c "ALTER SYSTEM SET pg_stat_statements.track_utility = 'off'"
 psql -c "ALTER SYSTEM SET pg_stat_statements.track_planning = 'off'"
 psql -c "ALTER SYSTEM SET pg_stat_statements.save = 'off'"
+
+# pg_hint_plan
+psql -c "ALTER SYSTEM SET pg_hint_plan.enable_hint_table = 'off'"
 # ##############################################################################
 
 psql -c "SELECT pg_reload_conf();"
@@ -92,6 +96,7 @@ echo "The Join Order Benchmark ..."
 psql -c "CREATE EXTENSION pg_stat_statements"
 psql -c "SELECT pg_stat_statements_reset()"
 psql -c "CREATE EXTENSION pg_prewarm"
+psql -c "SHOW pg_hint_plan.enable_hint_table"
 
 for i in {1..3}
 do
