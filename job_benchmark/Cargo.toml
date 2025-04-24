@@ -1,0 +1,8 @@
+[package]
+name = "job_benchmark"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+pgautohint = { path = "../pg-autohint" }
+postgres = "0.19.10"

@@ -89,10 +89,20 @@ impl Optimizer {
     /// # Arguments
     /// 
     /// * `conn`: The postgres connection
-    pub fn clear_hint_table(&mut self, conn: &mut Client) {
-    conn.execute("TRUNCATE TABLE hint_plan.hints", &[])
-        .unwrap_or_else(|e| {
-            eprintln!("Failed to truncate hint_plan.hints table: {}", e.to_string());
+    pub fn init_hint_table(&mut self, conn: &mut Client) {
+        // conn.execute("TRUNCATE TABLE IF EXISTS hint_plan.hints", &[])
+        // .unwrap_or_else(|e| {
+        //     eprintln!("Failed to truncate hint_plan.hints table: {}", e.to_string());
+        //     0
+        // });
+        conn.execute("DROP EXTENSION IF EXISTS pg_hint_plan CASCADE", &[])
+            .unwrap_or_else(|e| {
+            eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
+            0
+        });
+        conn.execute("CREATE EXTENSION IF NOT EXISTS pg_hint_plan", &[])
+            .unwrap_or_else(|e| {
+            eprintln!("Failed to create pg_hint_plan extension: {}", e.to_string());
             0
         });
     }
@@ -105,6 +115,9 @@ impl Optimizer {
     /// * `hints`: The hints to add as String
     /// * `application_name`: optional, the value of application_name where sessions can apply a hint. if not specified, hint will apply to all applications
     fn add_hint_table(&mut self, conn: &mut Client, query_id: i64, application_name: &str, hints: &str) {
+        if hints.is_empty() {
+            return;
+        }
         let query = self.add_hint_table_query(query_id, application_name, hints);
         // TODO: fix when hint is already there!
         conn.execute(&query, &[]).unwrap_or_else(|e| {
@@ -235,7 +248,7 @@ mod test_optimizer {
         optimizer.add_rule(Box::new(NljToHashJoin::new(1.0, 1000)));
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
         // clear hints
-        optimizer.clear_hint_table(&mut conn);
+        optimizer.init_hint_table(&mut conn);
         let application_name = Some("");
         let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
             .expect("Failed to read input file");

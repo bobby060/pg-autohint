@@ -71,7 +71,7 @@ impl CardCorrection {
                                   also need to handle SetOps nodes that can have two children, that's technically also subqueries")
                         }
                     },
-                    None => panic!("unreachable"),
+                    None => "".to_string(),
                 }
             }
         }
@@ -82,6 +82,9 @@ impl CardCorrection {
     fn get_apply_join(&mut self, join_node: JoinNode) -> String {
         let left = self.apply_recursive(join_node.get_left().unwrap());
         let right = self.apply_recursive(join_node.get_right().unwrap());
+        if left.eq("") || right.eq("") {
+            return "".to_string();
+        }
         let joins = format!("{} {}", left, right);
 
         self.correct_join_card(join_node, joins.clone());
