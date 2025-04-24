@@ -95,6 +95,11 @@ impl Optimizer {
         //     eprintln!("Failed to truncate hint_plan.hints table: {}", e.to_string());
         //     0
         // });
+        conn.execute("SET pg_hint_plan.enable_hint_table='off'", &[])
+            .unwrap_or_else(|e| {
+            eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
+            0
+        });
         conn.execute("DROP EXTENSION IF EXISTS pg_hint_plan CASCADE", &[])
             .unwrap_or_else(|e| {
             eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
@@ -103,6 +108,11 @@ impl Optimizer {
         conn.execute("CREATE EXTENSION IF NOT EXISTS pg_hint_plan", &[])
             .unwrap_or_else(|e| {
             eprintln!("Failed to create pg_hint_plan extension: {}", e.to_string());
+            0
+        });
+        conn.execute("SET pg_hint_plan.enable_hint_table='on'", &[])
+            .unwrap_or_else(|e| {
+            eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
             0
         });
     }
