@@ -20,7 +20,7 @@ echo "Use data catalog '$PGDATA'"
 
 # Binaries and data dirs
 INSTDIR=`pwd`/tmp_install
-QUERY_DIR=../jo-bench/queries
+QUERY_DIR=../../jo-bench/queries
 
 export PGDATABASE=imdbload
 export PGPORT=5432
