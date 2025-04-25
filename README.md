@@ -71,7 +71,7 @@ To load JOB benchmark
 git clone https://github.com/danolivo/jo-bench
 cd jo-bench
 
-export PGDATA=imdbload
+export PGDATABASE=imdbload
 export PGPORT=5432
 export PGHOST=localhost
 export PGUSER=postgres
@@ -89,15 +89,30 @@ sudo vim /etc/postgresql/17/main/postgresql.conf
 ```
 add
 ```
-shared_preload_libraries = 'pg_stat_statements'
+shared_preload_libraries = 'pg_stat_statements, pg_hint_plan'
 ```
 then
 ```
 sudo systemctl restart postgresql
-cd postgres-rel2sql/
+cd job_benchmark/
 ./run_job.sh
+cd -
 ```
 it will generate `job-onepass-X.dat` and `explains-X.txt` that contains execution time for each query and its plan from `EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)`
+
+To run hinted version
+first generate hint table
+```
+cd job_benchmark/
+cargo run --release <query dir>
+cd -
+```
+Then run the hinted queries
+```
+cd job_benchmark/
+./run_job_hinted.sh
+cd -
+```
 
 ## System design
 1. Parse Postgres JSON into tree

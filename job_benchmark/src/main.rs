@@ -18,6 +18,28 @@ fn main() {
     let mut opt = Optimizer::new();
     opt.init_hint_table(&mut conn);
 
+    // if is a file, optimize this sql file
+    if std::fs::metadata(query_path).expect("Failed to read metadata").is_file() {
+        let query = std::fs::read_to_string(query_path)
+            .expect("Failed to read SQL file");
+        println!("Optimizing query from file: {:?}", query_path);
+        let mut optimizer = Optimizer::new();
+        optimizer.add_rule(Box::new(rules::NljToHashJoin::new(1.0, 1500)));
+        optimizer.add_rule(Box::new(rules::CardCorrection::new(1.0)));
+        match run_optimize(&mut conn, &mut optimizer, &query) {
+            Ok(result) => {
+                if result.get_hints().is_none() || result.get_hints().is_some_and(|x| x.size() == 0) {
+                    eprintln!("Warning query {:?}: produced no hints", query_path);
+                }
+            }
+            Err(e) => {
+                eprintln!("Error optimizing query {:?}: {}", query_path, e);
+            }
+        }
+        return;
+    }
+
+    // if is a directory, optimize all queries in dir
     let query_files = std::fs::read_dir(query_path).expect("Failed to read query directory");
     for entry in query_files {
         // use new optimizer to clear the states between queries

@@ -1,49 +1,37 @@
-/* 60 */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT MIN(mi.info) AS movie_budget,
-       MIN(mi_idx.info) AS movie_votes,
-       MIN(n.name) AS male_writer,
-       MIN(t.title) AS violent_movie_title
-FROM cast_info AS ci,
-     info_type AS it1,
-     info_type AS it2,
+/* 47 */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT MIN(cn.name) AS company_name,
+       MIN(lt.link) AS link_type,
+       MIN(t.title) AS german_follow_up
+FROM company_name AS cn,
+     company_type AS ct,
      keyword AS k,
+     link_type AS lt,
+     movie_companies AS mc,
      movie_info AS mi,
-     movie_info_idx AS mi_idx,
      movie_keyword AS mk,
-     name AS n,
+     movie_link AS ml,
      title AS t
-WHERE ci.note IN ('(writer)',
-                  '(head writer)',
-                  '(written by)',
-                  '(story)',
-                  '(story editor)')
-  AND it1.info = 'genres'
-  AND it2.info = 'votes'
-  AND k.keyword IN ('murder',
-                    'violence',
-                    'blood',
-                    'gore',
-                    'death',
-                    'female-nudity',
-                    'hospital')
-  AND mi.info IN ('Horror',
-                  'Action',
-                  'Sci-Fi',
-                  'Thriller',
-                  'Crime',
-                  'War')
-  AND n.gender = 'm'
-  AND t.id = mi.movie_id
-  AND t.id = mi_idx.movie_id
-  AND t.id = ci.movie_id
+WHERE cn.country_code !='[pl]'
+  AND (cn.name LIKE '%Film%'
+       OR cn.name LIKE '%Warner%')
+  AND ct.kind ='production companies'
+  AND k.keyword ='sequel'
+  AND lt.link LIKE '%follow%'
+  AND mc.note IS NULL
+  AND mi.info IN ('Germany',
+                  'German')
+  AND t.production_year BETWEEN 2000 AND 2010
+  AND lt.id = ml.link_type_id
+  AND ml.movie_id = t.id
   AND t.id = mk.movie_id
-  AND ci.movie_id = mi.movie_id
-  AND ci.movie_id = mi_idx.movie_id
-  AND ci.movie_id = mk.movie_id
-  AND mi.movie_id = mi_idx.movie_id
-  AND mi.movie_id = mk.movie_id
-  AND mi_idx.movie_id = mk.movie_id
-  AND n.id = ci.person_id
-  AND it1.id = mi.info_type_id
-  AND it2.id = mi_idx.info_type_id
-  AND k.id = mk.keyword_id;
+  AND mk.keyword_id = k.id
+  AND t.id = mc.movie_id
+  AND mc.company_type_id = ct.id
+  AND mc.company_id = cn.id
+  AND mi.movie_id = t.id
+  AND ml.movie_id = mk.movie_id
+  AND ml.movie_id = mc.movie_id
+  AND mk.movie_id = mc.movie_id
+  AND ml.movie_id = mi.movie_id
+  AND mk.movie_id = mi.movie_id
+  AND mc.movie_id = mi.movie_id;
 
