@@ -118,11 +118,7 @@ do
   for file in $QUERY_DIR/*.sql
   do
     # Get filename
-    if [[ "$file" == *b.sql ]]; then
-      short_file=$(basename "$file")
-    else
-      continue
-    fi
+    short_file=$(basename "$file")
 
     echo -n "/* $filenum */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) " > test.sql
     cat $file >> test.sql
