@@ -84,6 +84,7 @@ psql -c "ALTER SYSTEM SET pg_stat_statements.save = 'off'"
 
 # pg_hint_plan
 psql -c "ALTER SYSTEM SET pg_hint_plan.enable_hint_table = 'off'"
+
 # ##############################################################################
 
 psql -c "SELECT pg_reload_conf();"
