@@ -45,3 +45,5 @@ QueryNumber	QueryName	ExecutionTime
 44	20b.sql	8226.005
 45	20c.sql	70492.602
 46	21a.sql	5150.107
+47	21b.sql	527765.733
+48	21c.sql	2579.915
