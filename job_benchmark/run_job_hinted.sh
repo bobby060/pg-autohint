@@ -65,10 +65,10 @@ psql -c "ALTER SYSTEM SET fsync = 'off'"
 # Performance & Planning ([un]-comment something before the test, if necessary)
 psql -c "ALTER SYSTEM SET from_collapse_limit = 20"
 psql -c "ALTER SYSTEM SET join_collapse_limit = 20"
-# psql -c "ALTER SYSTEM SET max_worker_processes = 32"
-psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
-# psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
-# psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
+psql -c "ALTER SYSTEM SET max_worker_processes = 32"
+# psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
+psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
+psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
 psql -c "ALTER SYSTEM SET min_parallel_table_scan_size = 0"
 psql -c "ALTER SYSTEM SET min_parallel_index_scan_size = 0"
 psql -c "ALTER SYSTEM SET max_parallel_workers = 32"
@@ -112,7 +112,7 @@ psql -c "SHOW pg_hint_plan.enable_hint"
 psql -c "SHOW pg_hint_plan.enable_hint_table"
 psql -c "SELECT COUNT(1) FROM hint_plan.hints"
 
-./target/release/job_benchmark $QUERY_DIR
+# ./target/release/job_benchmark $QUERY_DIR
 
 for i in {1..3}
 do
