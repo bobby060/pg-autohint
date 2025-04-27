@@ -8,7 +8,7 @@ ulimit -c unlimited
 # ##############################################################################
 
 # TODO: run Optimizer::optimize() over all queries in ../jo-bench/queries
-cargo build --release
+# cargo build --release
 
 # ##############################################################################
 #
@@ -65,10 +65,6 @@ psql -c "ALTER SYSTEM SET fsync = 'off'"
 # Performance & Planning ([un]-comment something before the test, if necessary)
 psql -c "ALTER SYSTEM SET from_collapse_limit = 20"
 psql -c "ALTER SYSTEM SET join_collapse_limit = 20"
-psql -c "ALTER SYSTEM SET max_worker_processes = 32"
-# psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
-psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
-psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
 psql -c "ALTER SYSTEM SET min_parallel_table_scan_size = 0"
 psql -c "ALTER SYSTEM SET min_parallel_index_scan_size = 0"
 psql -c "ALTER SYSTEM SET max_parallel_workers = 32"
@@ -76,6 +72,15 @@ psql -c "ALTER SYSTEM SET effective_cache_size = '32GB'"
 psql -c "ALTER SYSTEM SET geqo_threshold=18"
 psql -c "ALTER SYSTEM SET shared_buffers='4GB'"
 psql -c "ALTER SYSTEM SET work_mem='2GB'"
+
+# single core setting:
+psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
+
+# # multi core setting:
+# psql -c "ALTER SYSTEM SET max_worker_processes = 32"
+# psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 2"
+# psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
+# psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
 
 # Partitioning
 psql -c "ALTER SYSTEM SET enable_partitionwise_join = 'on'"

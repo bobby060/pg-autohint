@@ -44,7 +44,7 @@ fn main() {
     for entry in query_files {
         // use new optimizer to clear the states between queries
         let mut optimizer = Optimizer::new();
-        // optimizer.add_rule(Box::new(rules::NljToHashJoin::new(1.0, 1500)));
+        optimizer.add_rule(Box::new(rules::NljToHashJoin::new(1.0, 1500)));
         optimizer.add_rule(Box::new(rules::CardCorrection::new(1.0)));
 
         let entry = entry.expect("Failed to read directory entry");

@@ -1,31 +1,29 @@
-/* 5 */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT MIN(cn.name) AS from_company,
-       MIN(lt.link) AS movie_link_type,
-       MIN(t.title) AS sequel_movie
-FROM company_name AS cn,
-     company_type AS ct,
-     keyword AS k,
-     link_type AS lt,
+/* 113 */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT MIN(an.name) AS alternative_name,
+       MIN(chn.name) AS voiced_char_name,
+       MIN(n.name) AS voicing_actress,
+       MIN(t.title) AS american_movie
+FROM aka_name AS an,
+     char_name AS chn,
+     cast_info AS ci,
+     company_name AS cn,
      movie_companies AS mc,
-     movie_keyword AS mk,
-     movie_link AS ml,
+     name AS n,
+     role_type AS rt,
      title AS t
-WHERE cn.country_code !='[pl]'
-  AND (cn.name LIKE '%Film%'
-       OR cn.name LIKE '%Warner%')
-  AND ct.kind ='production companies'
-  AND k.keyword ='sequel'
-  AND lt.link LIKE '%follows%'
-  AND mc.note IS NULL
-  AND t.production_year = 1998
-  AND t.title LIKE '%Money%'
-  AND lt.id = ml.link_type_id
-  AND ml.movie_id = t.id
-  AND t.id = mk.movie_id
-  AND mk.keyword_id = k.id
+WHERE ci.note IN ('(voice)',
+                  '(voice: Japanese version)',
+                  '(voice) (uncredited)',
+                  '(voice: English version)')
+  AND cn.country_code ='[us]'
+  AND n.gender ='f'
+  AND rt.role ='actress'
+  AND ci.movie_id = t.id
   AND t.id = mc.movie_id
-  AND mc.company_type_id = ct.id
+  AND ci.movie_id = mc.movie_id
   AND mc.company_id = cn.id
-  AND ml.movie_id = mk.movie_id
-  AND ml.movie_id = mc.movie_id
-  AND mk.movie_id = mc.movie_id;
+  AND ci.role_id = rt.id
+  AND n.id = ci.person_id
+  AND chn.id = ci.person_role_id
+  AND an.person_id = n.id
+  AND an.person_id = ci.person_id;
 

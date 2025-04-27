@@ -56,10 +56,16 @@ psql -c "ALTER SYSTEM SET fsync = 'off'"
 # Performance & Planning ([un]-comment something before the test, if necessary)
 psql -c "ALTER SYSTEM SET from_collapse_limit = 20"
 psql -c "ALTER SYSTEM SET join_collapse_limit = 20"
-psql -c "ALTER SYSTEM SET max_worker_processes = 32"
-# psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
-psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
-psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
+
+# single core setting:
+psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
+
+# # multi core setting:
+# psql -c "ALTER SYSTEM SET max_worker_processes = 32"
+# psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 2"
+# psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
+# psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
+
 psql -c "ALTER SYSTEM SET min_parallel_table_scan_size = 0"
 psql -c "ALTER SYSTEM SET min_parallel_index_scan_size = 0"
 psql -c "ALTER SYSTEM SET max_parallel_workers = 32"
@@ -101,7 +107,7 @@ psql -c "SELECT pg_stat_statements_reset()"
 psql -c "CREATE EXTENSION pg_prewarm"
 psql -c "SHOW pg_hint_plan.enable_hint_table"
 
-for i in {1..3}
+for i in {2..3}
 do
   filenum=1
   echo -e "Clear a file with explains" > explains-$i.txt
