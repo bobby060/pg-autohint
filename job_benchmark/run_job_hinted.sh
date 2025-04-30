@@ -133,6 +133,15 @@ do
     # # generate hint
     # echo "Generating hint for $short_file ..."
     # ./target/release/job_benchmark $file
+    
+    # don't run 22c, 22d, 24a, 25a, 25c, 26a, 29c, 30c, 31c, 
+    # skip timeout queries
+    case $short_file in
+      "22c.sql"|"22d.sql"|"24a.sql"|"25a.sql"|"25c.sql"|"26a.sql"|"29c.sql"|"30c.sql"|"31c.sql")
+      echo "Skipping $short_file"
+      continue
+      ;;
+    esac
 
     echo -n "/* $filenum */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) " > test.sql
     cat $file >> test.sql

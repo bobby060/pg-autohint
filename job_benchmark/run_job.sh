@@ -107,7 +107,7 @@ psql -c "SELECT pg_stat_statements_reset()"
 psql -c "CREATE EXTENSION pg_prewarm"
 psql -c "SHOW pg_hint_plan.enable_hint_table"
 
-for i in {2..3}
+for i in {1..3}
 do
   filenum=1
   echo -e "Clear a file with explains" > explains-$i.txt

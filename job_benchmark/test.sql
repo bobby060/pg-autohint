@@ -1,4 +1,4 @@
-/* 113 */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT MIN(an.name) AS alternative_name,
+/* 104 */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT MIN(an.name) AS alternative_name,
        MIN(chn.name) AS voiced_char_name,
        MIN(n.name) AS voicing_actress,
        MIN(t.title) AS american_movie
