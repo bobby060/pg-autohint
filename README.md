@@ -79,13 +79,13 @@ export PGPASSWORD=<your password>
 
 psql -f schema.sql
 cp -r ./csv /tmp/csv
-psql -vdatadir="'/tmp'" -f ~/jo-bench/copy.sql
+psql -vdatadir="'/tmp'" -f copy.sql
 cd -
 ```
 
 To run the original one pass
 ```
-sudo vim /etc/postgresql/17/main/postgresql.conf
+sudo vim /etc/postgresql/<version number>/main/postgresql.conf
 ```
 add
 ```
@@ -95,7 +95,7 @@ then
 ```
 sudo systemctl restart postgresql
 cd job_benchmark/
-./run_job.sh
+./run_job.sh --single-core
 cd -
 ```
 it will generate `job-onepass-X.dat` and `explains-X.txt` that contains execution time for each query and its plan from `EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON)`
@@ -110,9 +110,11 @@ cd -
 Then run the hinted queries
 ```
 cd job_benchmark/
-./run_job_hinted.sh
+./run_job_hinted.sh --single-core
 cd -
 ```
+
+To run experiments under multicore setting, run `run_job.sh` and `run_job_hinted.sh` with `--multi-core` flag instead.
 
 ## System design
 1. Parse Postgres JSON into tree

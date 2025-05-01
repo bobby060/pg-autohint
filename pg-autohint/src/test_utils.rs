@@ -96,10 +96,10 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
 pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
     let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
-    let mut optimizer = Optimizer::new();
+    let mut optimizer = Optimizer::new(false, None);
     optimizer.add_rule(rule);
 
-    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze, false, None);
+    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze);
 
     correctness_test(
         "imdb",
@@ -112,10 +112,10 @@ pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
 pub fn hint_table_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
     let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
-    let mut optimizer = Optimizer::new();
+    let mut optimizer = Optimizer::new(false, None);
     optimizer.add_rule(rule);
 
-    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze, true, None);
+    let new_sql = optimizer.optimize(sql, &mut conn, is_analyze);
 
     correctness_test(
         "imdb",

@@ -13,14 +13,18 @@ use postgres::Client;
 /// * `rules`: A vector of rules to apply to the plan
 pub struct Optimizer {
     pub rules: Vec<Box<dyn Rule>>,
+    enable_hint_table: bool,
     default_timeout: Option<TimeOut>,
+    hint_table_app_name: String
 }
 
 impl Optimizer {
-    pub fn new() -> Self {
+    pub fn new(enable_hint_table: bool, hint_table_app_name: Option<&str>) -> Self {
         Optimizer {
             rules: vec![],
+            enable_hint_table: enable_hint_table,
             default_timeout: None,
+            hint_table_app_name: hint_table_app_name.unwrap_or_else(|| "").to_string()
         }
     }
 
@@ -44,14 +48,22 @@ impl Optimizer {
         sql: &str,
         conn: &mut Client,
         is_analyze: bool,
-        add_hint_table: bool,
-        hint_table_app_name: Option<&str>,
     ) -> Result<Query, String> {
         let mut query = Query::new(sql.to_string(), None, self.default_timeout.clone());
         let plan = query.get_plan(conn, is_analyze)?;
         let mut query_id = None;
-        if add_hint_table {
-            // if query_id is None, send a warning that hint table will not be used because no query id is parsed
+        if self.enable_hint_table {
+            // check if hint_plan.hints table is created, init hint table if not
+            if conn
+                .query("SELECT 1 FROM pg_catalog.pg_tables WHERE schemaname='hint_plan' AND tablename = 'hints'", &[])
+                .unwrap()
+                .is_empty()
+            {
+                println!("Info: The hint_plan.hints table does not exist. Creating new hint table.");
+                self.init_hint_table(conn);
+            } else {
+                println!("Info: The hint_plan.hints table exists. Reusing existing hint table.");
+            }
             conn.execute("SET pg_hint_plan.enable_hint_table='on'", &[])
                 .unwrap();
             query_id = plan.query_id.clone();
@@ -60,13 +72,14 @@ impl Optimizer {
                 .unwrap();
         }
         let hints: PgHintList = self.apply_rules(plan);
-        if add_hint_table {
+        if self.enable_hint_table {
             match query_id {
                 Some(id) => {
-                    let application_name = hint_table_app_name.unwrap_or_else(|| "");
-                    self.add_hint_table(conn, id, application_name, &&hints.to_hint_table_string());
+                    let hint_table_app_name = self.hint_table_app_name.clone();
+                    self.add_hint_table(conn, id, &hint_table_app_name, &&hints.to_hint_table_string());
                 }
                 None => {
+                    // if query_id is None, send a warning that hint table will not be used because no query id is parsed
                     eprint!("Warning: Hint table will not be used for query because no query ID is parsed: {}.\n
                     consider running SET compute_query_id = 'on'; ", sql);
                 }
@@ -136,7 +149,7 @@ impl Optimizer {
         if hints.is_empty() {
             return;
         }
-        let query = self.add_hint_table_query(query_id, application_name, hints);
+        let query = self.insert_hint_to_hint_table(query_id, application_name, hints);
         // TODO: fix when hint is already there!
         conn.execute(&query, &[]).unwrap_or_else(|e| {
             eprintln!("Failed to insert into hint table: {}", e.to_string());
@@ -144,7 +157,7 @@ impl Optimizer {
         });
     }
 
-    fn add_hint_table_query(
+    fn insert_hint_to_hint_table(
         &mut self,
         query_id: i64,
         application_name: &str,
@@ -207,7 +220,7 @@ mod test_optimizer {
         let original_query = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
             .expect("Failed to read input file");
 
-        let mut optimizer = Optimizer::new();
+        let mut optimizer = Optimizer::new(false, None);
         optimizer.add_rule(Box::new(nlj_to_hashjoin_rule));
 
         let hint_list = optimizer.apply_rules(plan_node);
@@ -225,12 +238,12 @@ mod test_optimizer {
     #[test]
     fn test_optimize() {
         let rule = NljToHashJoin::new(1.2, 1000);
-        let mut optimizer = Optimizer::new();
+        let mut optimizer = Optimizer::new(false, None);
         optimizer.add_rule(Box::new(rule));
 
         let sql = "SELECT * FROM title_basics";
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-        let new_sql = optimizer.optimize(sql, &mut conn, false, false, None);
+        let new_sql = optimizer.optimize(sql, &mut conn, false);
 
         assert_eq!(new_sql.unwrap().get_original_sql(), sql);
     }
@@ -249,7 +262,7 @@ mod test_optimizer {
             std::fs::read_to_string("resources/test_sql/card_correction_rule_test.sql")
                 .expect("Failed to read input file");
 
-        let mut optimizer = Optimizer::new();
+        let mut optimizer = Optimizer::new(false, None);
         optimizer.add_rule(Box::new(card_correction_rule));
 
         let hint_list = optimizer.apply_rules(plan_node);
@@ -265,27 +278,57 @@ mod test_optimizer {
 
     #[test]
     fn test_add_hint_table_query() {
-        let mut optimizer = Optimizer::new();
+        let mut optimizer = Optimizer::new(true, None);
         let query_id = -7164653396197960701;
         let application_name = "";
         let hints = "SeqScan(t1)";
-        assert!(optimizer.add_hint_table_query(query_id, application_name, hints)
+        assert!(optimizer.insert_hint_to_hint_table(query_id, application_name, hints)
         .eq("INSERT INTO hint_plan.hints(query_id, application_name, hints) VALUES (-7164653396197960701, '', 'SeqScan(t1)');"));
     }
 
     #[test]
     fn test_run_hint_table_query() {
-        let mut optimizer = Optimizer::new();
+        let mut optimizer = Optimizer::new(true, None);
         optimizer.add_rule(Box::new(NljToHashJoin::new(1.0, 1000)));
         let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
-        // clear hints
-        optimizer.init_hint_table(&mut conn);
-        let application_name = Some("");
         let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
             .expect("Failed to read input file");
         // insert hints into hint table
         let result = optimizer
-            .optimize(&sql, &mut conn, true, true, application_name)
+            .optimize(&sql, &mut conn, true)
+            .unwrap();
+        assert_eq!(
+            result.get_hints().unwrap().size(),
+            2,
+            "expected 2 hints, got {}",
+            result.get_hints().unwrap().size()
+        );
+        // run query again, should have hints applied
+        let query = Query::new(sql.to_string(), None, optimizer.default_timeout.clone());
+        let plan = query.get_plan(&mut conn, false).unwrap();
+        // assert HashJoin is in plan
+        assert!(
+            format!("{:#?}", plan.plan).contains("HashJoin"),
+            "Expected HashJoin in the plan, but it was not found. Plan: {:#?}",
+            plan
+        );
+    }
+
+
+    #[test]
+    fn test_run_hint_table_query_cold_start() {
+        // reset hint table and disable it for testing
+        let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
+        conn.execute("ALTER SYSTEM SET pg_hint_plan.enable_hint_table = 'off'", &[]).unwrap();
+        conn.execute("DROP EXTENSION IF EXISTS pg_hint_plan", &[]).unwrap();
+
+        let mut optimizer = Optimizer::new(true, None);
+        optimizer.add_rule(Box::new(NljToHashJoin::new(1.0, 1000)));
+        let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
+            .expect("Failed to read input file");
+        // insert hints into hint table
+        let result = optimizer
+            .optimize(&sql, &mut conn, true)
             .unwrap();
         assert_eq!(
             result.get_hints().unwrap().size(),
