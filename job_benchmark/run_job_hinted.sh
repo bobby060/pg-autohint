@@ -73,15 +73,18 @@ psql -c "ALTER SYSTEM SET geqo_threshold=18"
 psql -c "ALTER SYSTEM SET shared_buffers='4GB'"
 psql -c "ALTER SYSTEM SET work_mem='2GB'"
 
+# These configs are only effective when multicore setting is used
+psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
+psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
+psql -c "ALTER SYSTEM SET max_worker_processes = 32"
+
+# single / multicore
 if [[ "$1" == "--single-core" ]]; then
   # single core setting:
   psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
 elif [[ "$1" == "--multi-core" ]]; then
   # multi core setting:
-  psql -c "ALTER SYSTEM SET max_worker_processes = 32"
   psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 2"
-  psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
-  psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
 else
   echo "Invalid flag. Use --single-core or --multi-core."
   exit 1
