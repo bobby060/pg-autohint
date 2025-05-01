@@ -3,13 +3,13 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[derive(PartialEq, Eq, Serialize)]
-struct Catalog {
-    tables: HashMap<String, Table>,
-    indexes: HashMap<String, String>, // index_name -> table_name
+pub struct Catalog {
+    pub tables: HashMap<String, Table>,
+    pub indexes: HashMap<String, String>, // index_name -> table_name
 }
 
 impl Catalog {
-    fn new(conn: &mut Client) -> Self {
+    pub fn new(conn: &mut Client) -> Self {
         let mut tables: HashMap<String, Table> = HashMap::new();
         let mut indexes: HashMap<String, String> = HashMap::new();
 
@@ -53,7 +53,7 @@ WHERE schemaname != 'pg_catalog' AND
 }
 
 #[derive(Hash, PartialEq, Eq, Serialize, Deserialize, Clone)]
-struct Table {
+pub struct Table {
     name: String,
     columns: Vec<String>,
 }

@@ -453,7 +453,10 @@ fn parse_projections(output: Vec<String>) -> Result<Vec<SelectItem>, String> {
 /// * `alias`: The alias of the table
 ///
 /// # Returns a TableWithJoins struct
-fn build_base_table(relation_name: Option<String>, alias: String) -> Result<TableWithJoins, String> {
+fn build_base_table(
+    relation_name: Option<String>,
+    alias: String,
+) -> Result<TableWithJoins, String> {
     Ok(TableWithJoins {
         joins: vec![],
         relation: TableFactor::Table {
@@ -462,19 +465,19 @@ fn build_base_table(relation_name: Option<String>, alias: String) -> Result<Tabl
                 None => ObjectName::from_str(&alias)?,
             },
             alias: {
-                    let ident = match parse_expr(alias.as_str()) {
-                        Ok(Expr::Identifier(ident)) => ident,
-                        _ => {
-                            return Err(format!(
-                                "Failed to parse alias: expected an identifier, but got '{}'",
-                                alias
-                            ))
-                        }
-                    };
-                    Some(TableAlias {
-                        name: ident,
-                        columns: vec![],
-                    })
+                let ident = match parse_expr(alias.as_str()) {
+                    Ok(Expr::Identifier(ident)) => ident,
+                    _ => {
+                        return Err(format!(
+                            "Failed to parse alias: expected an identifier, but got '{}'",
+                            alias
+                        ))
+                    }
+                };
+                Some(TableAlias {
+                    name: ident,
+                    columns: vec![],
+                })
             },
             args: None,
             with_hints: vec![],
@@ -573,7 +576,8 @@ mod test_visit_nodes {
     // visit gather node should ignore it, returning the visit result of its only children
     #[test]
     fn test_visit_gather() {
-        let test_query = "SELECT tconst FROM title_basics AS title_basics WHERE (runtimeminutes < 25)";
+        let test_query =
+            "SELECT tconst FROM title_basics AS title_basics WHERE (runtimeminutes < 25)";
         let test_ast = parse_query(test_query).unwrap().body;
         let scan_node = SeqScan {
             parent_relationship: Some("Outer".to_string()),
@@ -871,6 +875,12 @@ mod test_visit {
         let root = query.get_plan(&mut conn, false).unwrap();
         let ast = root.visit_plan_node();
         println!("{:#?}", ast);
+    }
+
+    #[test]
+    #[ignore]
+    fn test_order_by_not_in_result() {
+        test_input_plan("resources/test_json/order_by_bad_col.json");
     }
 
     // fails
