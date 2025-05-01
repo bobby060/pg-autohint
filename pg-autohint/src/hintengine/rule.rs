@@ -8,4 +8,7 @@ pub trait Rule {
 
     /// Whether the rule requires an analyzed plan to be applied
     fn requires_analyzed_plan(&self) -> bool;
+
+    /// Reset any internal state (especually accumulated hints)
+    fn reset(&mut self);
 }
