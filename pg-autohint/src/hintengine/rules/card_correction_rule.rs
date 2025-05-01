@@ -54,11 +54,17 @@ impl CardCorrection {
                 self.get_scan(ScanNode::IndexOnlyScan(index_only_scan))
             }
             PlanNode::ValueScan(value_scan) => self.get_scan(ScanNode::ValueScan(value_scan)),
-            PlanNode::BitmapHeapScan(bitmap_heap_scan) => self.get_scan(ScanNode::BitmapHeapScan(bitmap_heap_scan)),
+            PlanNode::BitmapHeapScan(bitmap_heap_scan) => {
+                self.get_scan(ScanNode::BitmapHeapScan(bitmap_heap_scan))
+            }
             PlanNode::SampleScan(sample_scan) => self.get_scan(ScanNode::SampleScan(sample_scan)),
-            PlanNode::WorkTableScan(work_table_scan) => self.get_scan(ScanNode::WorkTableScan(work_table_scan)),
+            PlanNode::WorkTableScan(work_table_scan) => {
+                self.get_scan(ScanNode::WorkTableScan(work_table_scan))
+            }
             PlanNode::CteScan(cte_scan) => self.get_scan(ScanNode::CteScan(cte_scan)),
-            PlanNode::FunctionScan(function_scan) => self.get_scan(ScanNode::FunctionScan(function_scan)),
+            PlanNode::FunctionScan(function_scan) => {
+                self.get_scan(ScanNode::FunctionScan(function_scan))
+            }
             _ => {
                 // if not join or scan nodes, visit children
                 let children = plan.get_children();
@@ -70,7 +76,7 @@ impl CardCorrection {
                                   also need to handle SetOps nodes that can have two children, that's technically also subqueries")
                         }
                     },
-                    None => panic!("unreachable"),
+                    None => "".to_string(),
                 }
             }
         }
@@ -81,6 +87,9 @@ impl CardCorrection {
     fn get_apply_join(&mut self, join_node: JoinNode) -> String {
         let left = self.apply_recursive(join_node.get_left().unwrap());
         let right = self.apply_recursive(join_node.get_right().unwrap());
+        if left.eq("") || right.eq("") {
+            return "".to_string();
+        }
         let joins = format!("{} {}", left, right);
 
         self.correct_join_card(join_node, joins.clone());

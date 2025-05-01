@@ -117,7 +117,7 @@ impl Query {
         }
 
         let query = format!("{}{}", prefix, self.to_string());
-        let result = conn.query(&query, &[]).unwrap();
+        let result = conn.query(&query, &[]).map_err(|e| e.to_string())?;
 
         let value: Option<Json<Vec<PlanRoot>>> = result.get(0).unwrap().get(0);
 

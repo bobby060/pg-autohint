@@ -1,0 +1,162 @@
+#!/bin/bash
+ulimit -c unlimited
+
+# ##############################################################################
+#
+# Pass of the Join Order Benchmark to Add Hints to the Hint Table
+#
+# ##############################################################################
+
+# TODO: run Optimizer::optimize() over all queries in ../jo-bench/queries
+# cargo build --release
+
+# ##############################################################################
+#
+# Pass of the Join Order Benchmark over a PostgreSQL instance
+#
+# ##############################################################################
+
+echo "Use data catalog '$PGDATA'"
+
+# Binaries and data dirs
+INSTDIR=`pwd`/tmp_install
+QUERY_DIR=../../jo-bench/queries
+
+export PGDATABASE=imdbload
+export PGPORT=5432
+export PGHOST=localhost
+export PGUSER=postgres
+export PGPASSWORD=postgres
+
+#define environment
+export LD_LIBRARY_PATH=$INSTDIR/lib:$LD_LIBRARY_PATH
+export PATH=$INSTDIR/bin:$PATH
+
+# Stop instances and clean logs.
+pg_ctl -D $PGDATA stop
+rm -rf logfile.log
+
+# Kill all postgres processes
+unamestr=`uname`
+if [[ "$unamestr" == 'Linux' ]]; then
+    pkill -U `whoami` -9 -e postgres
+	pkill -U `whoami` -9 -e pgbench
+	pkill -U `whoami` -9 -e psql
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    killall -u `whoami` -vz -9 postgres
+    killall -u `whoami` -vz -9 pgbench
+    killall -u `whoami` -vz -9 psql
+else
+    echo "Unintended OS."
+fi
+sleep 1
+
+pg_ctl -w -D $PGDATA -l logfile.log start
+
+psql -c "DROP EXTENSION IF EXISTS pg_stat_statements"
+psql -c "DROP EXTENSION IF EXISTS pg_prewarm"
+
+# INSTANCE SETTINGS ############################################################
+psql -c "ALTER SYSTEM SET compute_query_id = 'on'"
+#psql -c "ALTER SYSTEM SET shared_preload_libraries = 'pg_prewarm, pg_stat_statements'"
+psql -c "ALTER SYSTEM SET checkpoint_timeout = 86399"
+psql -c "ALTER SYSTEM SET fsync = 'off'"
+
+# Performance & Planning ([un]-comment something before the test, if necessary)
+psql -c "ALTER SYSTEM SET from_collapse_limit = 20"
+psql -c "ALTER SYSTEM SET join_collapse_limit = 20"
+psql -c "ALTER SYSTEM SET min_parallel_table_scan_size = 0"
+psql -c "ALTER SYSTEM SET min_parallel_index_scan_size = 0"
+psql -c "ALTER SYSTEM SET max_parallel_workers = 32"
+psql -c "ALTER SYSTEM SET effective_cache_size = '32GB'"
+psql -c "ALTER SYSTEM SET geqo_threshold=18"
+psql -c "ALTER SYSTEM SET shared_buffers='4GB'"
+psql -c "ALTER SYSTEM SET work_mem='2GB'"
+
+# single core setting:
+psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 0"
+
+# # multi core setting:
+# psql -c "ALTER SYSTEM SET max_worker_processes = 32"
+# psql -c "ALTER SYSTEM SET max_parallel_workers_per_gather = 2"
+# psql -c "ALTER SYSTEM SET parallel_setup_cost = 0.1"
+# psql -c "ALTER SYSTEM SET parallel_tuple_cost = 0.00001"
+
+# Partitioning
+psql -c "ALTER SYSTEM SET enable_partitionwise_join = 'on'"
+
+# prewarm
+psql -c "ALTER SYSTEM SET pg_prewarm.autoprewarm = true"
+psql -c "ALTER SYSTEM SET pg_prewarm.autoprewarm_interval = 0"
+
+#pg_stat_statements
+psql -c "ALTER SYSTEM SET pg_stat_statements.max = 50000"
+psql -c "ALTER SYSTEM SET pg_stat_statements.track = 'top'"
+psql -c "ALTER SYSTEM SET pg_stat_statements.track_utility = 'off'"
+psql -c "ALTER SYSTEM SET pg_stat_statements.track_planning = 'off'"
+psql -c "ALTER SYSTEM SET pg_stat_statements.save = 'off'"
+
+# pg_hint_plan
+psql -c "ALTER SYSTEM SET pg_hint_plan.enable_hint_table='on'"
+
+# query timeout
+psql -c "ALTER SYSTEM SET statement_timeout = 2400000"
+# ##############################################################################
+
+psql -c "SELECT pg_reload_conf();"
+pg_ctl -D $PGDATA restart
+
+sleep 20 # pg_prewarm should has already done its stuff
+
+echo "The Join Order Benchmark ..."
+
+psql -c "CREATE EXTENSION pg_stat_statements"
+psql -c "SELECT pg_stat_statements_reset()"
+psql -c "CREATE EXTENSION pg_prewarm"
+psql -c "SHOW pg_hint_plan.enable_hint"
+psql -c "SHOW pg_hint_plan.enable_hint_table"
+psql -c "SELECT COUNT(1) FROM hint_plan.hints"
+
+# ./target/release/job_benchmark $QUERY_DIR
+
+for i in {1..3}
+do
+  filenum=1
+  echo -e "Clear a file with explains" > explains-hinted-$i.txt
+  echo -e "QueryNumber\tQueryName\tExecutionTime" > job_onepass-hinted-$i.dat
+  
+  for file in $QUERY_DIR/*.sql
+  do
+    # Get filename
+    short_file=$(basename "$file")
+
+    # # generate hint
+    # echo "Generating hint for $short_file ..."
+    # ./target/release/job_benchmark $file
+    
+    # don't run 22c, 22d, 24a, 25a, 25c, 26a, 29c, 30c, 31c, 
+    # skip timeout queries
+    case $short_file in
+      "22c.sql"|"22d.sql"|"24a.sql"|"25a.sql"|"25c.sql"|"26a.sql"|"29c.sql"|"30c.sql"|"31c.sql")
+      echo "Skipping $short_file"
+      continue
+      ;;
+    esac
+
+    echo -n "/* $filenum */ EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) " > test.sql
+    cat $file >> test.sql
+    result=$(psql -f test.sql)
+
+    echo -e "Query $filenum\t$short_file\n=================\n" >> explains-hinted-$i.txt
+    echo -e $result >> explains-hinted-$i.txt
+    exec_time=$(echo $result | sed -n 's/.*"Execution Time": \([0-9]*\.[0-9]*\).*/\1/p')
+    echo -e "$filenum\t$short_file\t$exec_time"
+    echo -e "$filenum\t$short_file\t$exec_time" >> job_onepass-hinted-$i.dat
+    filenum=$((filenum+1))
+  done
+done
+
+# Save buffers usage to do correct pg_prewarm next time
+psql -c "SELECT autoprewarm_dump_now();"
+
+pg_ctl -D $PGDATA stop

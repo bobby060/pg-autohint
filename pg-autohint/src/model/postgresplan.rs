@@ -15,7 +15,7 @@ pub struct PlanRoot {
     #[serde(rename = "Execution Time")]
     pub execution_time: Option<f64>,
     #[serde(rename = "Query Identifier")]
-    pub query_id: Option<i64>
+    pub query_id: Option<i64>,
 }
 
 impl PlanRoot {
@@ -117,6 +117,8 @@ pub enum PlanNode {
     #[serde(rename = "Index Only Scan")]
     IndexOnlyScan(IndexOnlyScan),
     Memoize(Memoize),
+    Materialize(Materialize),
+    #[serde(rename = "SetOp")]
     SetOp(SetOp),
     LockRows(LockRows),
     #[serde(rename = "Result")]
@@ -517,6 +519,7 @@ impl PlanNode {
             PlanNode::NestedLoopJoin(nested_loop_join) => nested_loop_join.children.clone(),
             PlanNode::IndexOnlyScan(_) => None,
             PlanNode::Memoize(memoize) => memoize.children.clone(),
+            PlanNode::Materialize(materialize) => materialize.children.clone(),
             PlanNode::ValueScan(_) => None,
             PlanNode::SubqueryScan(subquery_scan) => subquery_scan.children.clone(),
             PlanNode::SetOp(set_op) => set_op.children.clone(),
@@ -612,12 +615,13 @@ impl ScanNode {
             ScanNode::ValueScan(_) => None,
             ScanNode::SubqueryScan(_) => None,
             ScanNode::BitmapHeapScan(_) => None,
-            ScanNode::BitmapIndexScan(bitmap_index_scan) => Some(bitmap_index_scan.index_name.clone()),
+            ScanNode::BitmapIndexScan(bitmap_index_scan) => {
+                Some(bitmap_index_scan.index_name.clone())
+            }
             ScanNode::SampleScan(_) => None,
             ScanNode::WorkTableScan(_) => None,
             ScanNode::CteScan(_) => None,
             ScanNode::FunctionScan(_) => None,
-
         }
     }
 
@@ -875,6 +879,16 @@ pub struct Memoize {
     pub cache_key: Option<String>,
     #[serde(rename = "Cache Mode")]
     pub cache_mode: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct Materialize {
+    #[serde(rename = "Parent Relationship")]
+    pub parent_relationship: Option<String>,
+    #[serde(rename = "Plans")]
+    pub children: Option<Vec<PlanNode>>,
+    #[serde(rename = "Output")]
+    pub output: Option<Vec<String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

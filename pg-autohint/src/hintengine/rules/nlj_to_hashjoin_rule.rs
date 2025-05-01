@@ -1,6 +1,9 @@
 use crate::{
     hintengine::rule::Rule,
-    model::{hints::{PgHint, PgHintList}, postgresplan::{JoinNode, PlanNode, ScanNode}},
+    model::{
+        hints::{PgHint, PgHintList},
+        postgresplan::{JoinNode, PlanNode, ScanNode},
+    },
 };
 
 /// NljToHashJoin rule that requires analyze
@@ -92,11 +95,13 @@ impl NljToHashJoin {
             PlanNode::IndexScan(index_scan) => self.get_scan(ScanNode::IndexScan(index_scan)),
             PlanNode::IndexOnlyScan(index_only_scan) => {
                 self.get_scan(ScanNode::IndexOnlyScan(index_only_scan))
-            },
+            }
             // pg_hint_plan only supports queries with one VALUES, which can be hinted as *VALUES*
             PlanNode::ValueScan(value_scan) => self.get_scan(ScanNode::ValueScan(value_scan)),
             PlanNode::CteScan(cte_scan) => self.get_scan(ScanNode::CteScan(cte_scan)),
-            PlanNode::FunctionScan(function_scan) => self.get_scan(ScanNode::FunctionScan(function_scan)),
+            PlanNode::FunctionScan(function_scan) => {
+                self.get_scan(ScanNode::FunctionScan(function_scan))
+            }
             _ => {
                 // if not join or scan nodes, visit children
                 let children = plan.get_children();
@@ -108,7 +113,7 @@ impl NljToHashJoin {
                                   also need to handle SetOps nodes that can have two children, that's technically also subqueries")
                         }
                     },
-                    None => panic!("unreachable"),
+                    None => "".to_string(),
                 }
             }
         }
@@ -119,6 +124,9 @@ impl NljToHashJoin {
     fn get_apply_join(&mut self, join_node: JoinNode) -> String {
         let left = self.apply_recursive(join_node.get_left().unwrap());
         let right = self.apply_recursive(join_node.get_right().unwrap());
+        if left.eq("") || right.eq("") {
+            return "".to_string();
+        }
         let joins = format!("{} {}", left, right);
 
         self.nlj_to_hash(join_node, joins.clone());
@@ -129,7 +137,8 @@ impl NljToHashJoin {
     /// return the alias for constructing hints for the joins above,
     /// which can be recognized by pg_hint_plan
     fn get_scan(&mut self, scan_node: ScanNode) -> String {
-        scan_node.get_alias()
+        let rel_name = scan_node.get_alias();
+        rel_name
     }
 }
 
