@@ -99,8 +99,9 @@ Then `EXPLAIN VERBOSE` returns query identifier, which would be used to insert h
 
 Install code coverage tool `cargo +stable install cargo-llvm-cov --locked`
 
-Redo code coverage test"
-```cargo llvm-cov --html
+Redo code coverage test
+```
+cargo llvm-cov --html
 ```
 
 ### JOB benchmark
