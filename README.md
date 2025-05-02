@@ -1,5 +1,25 @@
 # pg-autohint
 
+AutoHint is  system designed to enable using pg_hint_plan to implement heuristic, rules-based improvements to Postgres query plans.
+
+At a high level, AutoHint either plans a query (or plans and executes a query) on Postgres, then uses rules to identify problems with the Postgres plan. Each rule generates a list of query hints designed to improve the plan.
+
+Currently two rules are fully implemented with one in progress:
+
+1. NLJ to Hash Join: Identifies Nested Loop Joins whose estimated cardinality is off by a large factor from actual cardinality and converts to Hash Joins
+2. Cardinality injection. Injects the actual cardinality of joins back into the plan after analyzing
+3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index
+
+Additional patterns should be easy to implement.
+
+
+We support both running hints that are in the query and also saving hints to the hint table so they are automatically applied when the query is run in the future.
+
+
+
+
+
+
 
 
 
@@ -118,9 +138,3 @@ cd job_benchmark/
 cd -
 ```
 
-To run experiments under multicore setting, run `run_job.sh` and `run_job_hinted.sh` with `--multi-core` flag instead.
-
-## System design
-1. Parse Postgres JSON into tree
-2. Convert tree into SQL AST
-3. Convert SQL AST into plain text

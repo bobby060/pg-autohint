@@ -1,7 +1,9 @@
 use crate::connector::establish_connection;
 use crate::hintengine::Optimizer;
 use crate::hintengine::Rule;
+use crate::model::hints::PgHintList;
 use postgres::types::Type;
+use postgres::Client;
 
 /// Test correctness of the new sql query by comparing the result with the original sql query
 ///
@@ -93,7 +95,7 @@ pub fn correctness_test(db_name: &str, original_sql: &str, new_sql: &str, ordere
     }
 }
 
-pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
+pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) -> PgHintList {
     let mut conn = establish_connection("imdb", "postgres", "postgres", "localhost", "5432");
 
     let mut optimizer = Optimizer::new(false, None);
@@ -104,9 +106,11 @@ pub fn rule_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
     correctness_test(
         "imdb",
         sql,
-        new_sql.unwrap().get_original_sql(),
+        new_sql.as_ref().unwrap().get_original_sql().clone(),
         sql.contains("ORDER BY"),
     );
+
+    new_sql.unwrap().get_hints().unwrap().clone()
 }
 
 pub fn hint_table_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
@@ -123,4 +127,8 @@ pub fn hint_table_test(rule: Box<dyn Rule>, sql: &str, is_analyze: bool) {
         new_sql.unwrap().get_original_sql(),
         sql.contains("ORDER BY"),
     );
+}
+
+pub fn get_test_connection() -> Client {
+    establish_connection("imdb", "postgres", "postgres", "localhost", "5432")
 }

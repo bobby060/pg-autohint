@@ -55,6 +55,11 @@ TODO: put this into a graph
     - Reuses datafusion ast functionality to convert the constructed ast into SQL query.
 - Postgres Connector (`connector.rs`): Uses postgres crate to expose a simple API to connect to a Postgres DB, convert a sql string to a PlanNode, and converte a SQL file to a JSON file of the corresponding plan.
 
+### Current Rules:
+1. NLJ to Hash Join: Identifies Nested Loop Joins whose estimated cardinality is off by a large factor from actual cardinality and converts to Hash Joins
+2. Cardinality injection. Injects the actual cardinality of joins back into the plan after analyzing
+3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index
+
 
 ## Design Rationale
 >Explain the goals of this design and how the design achieves these goals. Present alternatives considered and document why they are not chosen.
@@ -66,7 +71,7 @@ Alternative design considered: converting the physical plan to a Datafusion AST,
 
 
 ## Testing Plan
-Unit Tests
+### Unit Tests
   - We use the IMDB dataset on Postgres for unit testing. We generate SQL queries with various clauses to cover all possible node types in the EXPLAIN statement. This is to test our correctness when converting the json-formatted query plan into the deserialized tree structure. Our system should successfully convert all types of SQL queries.
 
   - We come up with SQL queries that Postgres would generate sub-optimal query plans on. We then use our converter to get deserialized plan and apply our transformation rules to test the performance of our optimization. Relevant metrics include 1) optimization time; 2) execution time improvements obtained from EXPLAIN ANALYZE statements before and after optimization.
@@ -76,7 +81,7 @@ Unit Tests
     
     We are in the process of adding unit tests for each module which do not require a Postgres database.
 
-By the end of the semester, we hope to identify and run a benchmark that will test how much (if at all) our rules can improve performance.
+### JOB
 
 
 We will document code coverage with [cargo-llvm-cov](https://lib.rs/crates/cargo-llvm-cov). We are currently at X% coverage.
