@@ -108,7 +108,7 @@ mod test_order_by_incorrect_index_rule {
             Box::new(OrderByIncorrectIndex::new(&mut conn)),
             sql,
             false,
-        // );
+        );
         // assert_eq!(hints.size(), 1);
         // assert_eq!(hints.to_string().contains("IndexScan"), true,);
     }
