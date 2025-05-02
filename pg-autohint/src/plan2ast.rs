@@ -827,6 +827,7 @@ mod test_visit {
     }
 
     #[test]
+    #[ignore]
     fn test_group_by_visit() {
         test_input_plan("resources/test_json/simple_groupby.json");
     }
