@@ -60,6 +60,10 @@ impl Rule for OrderByIncorrectIndex {
     fn requires_analyzed_plan(&self) -> bool {
         false
     }
+
+    fn reset(&mut self) {
+        self.pg_hint_list = PgHintList::new();
+    }
 }
 
 impl OrderByIncorrectIndex {

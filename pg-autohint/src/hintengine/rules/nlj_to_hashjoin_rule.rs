@@ -28,6 +28,10 @@ impl Rule for NljToHashJoin {
     fn requires_analyzed_plan(&self) -> bool {
         true
     }
+
+    fn reset(&mut self) {
+        self.pg_hint_list = PgHintList::new();
+    }
 }
 
 impl NljToHashJoin {

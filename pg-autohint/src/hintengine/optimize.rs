@@ -33,7 +33,7 @@ impl Optimizer {
     /// * `conn`: The connection to the database
     /// * `is_analyze`: Whether the query would be executed via EXPLAIN ANALYZE
     /// * `add_hint_table`: Whether the generated hints should be added to hint table
-    /// * `hint_table_app_name`: only used when `add_hint_table` is true. optional, the value of application_name where sessions can apply a hint. 
+    /// * `hint_table_app_name`: only used when `add_hint_table` is true. optional, the value of application_name where sessions can apply a hint.
     /// if not specified, hint will enabled to all applications
     ///
     /// # Returns
@@ -52,10 +52,12 @@ impl Optimizer {
         let mut query_id = None;
         if add_hint_table {
             // if query_id is None, send a warning that hint table will not be used because no query id is parsed
-            conn.execute("SET pg_hint_plan.enable_hint_table='on'", &[]).unwrap();
+            conn.execute("SET pg_hint_plan.enable_hint_table='on'", &[])
+                .unwrap();
             query_id = plan.query_id.clone();
         } else {
-            conn.execute("SET pg_hint_plan.enable_hint_table='off'", &[]).unwrap();
+            conn.execute("SET pg_hint_plan.enable_hint_table='off'", &[])
+                .unwrap();
         }
         let hints: PgHintList = self.apply_rules(plan);
         if add_hint_table {
@@ -85,9 +87,9 @@ impl Optimizer {
     }
 
     /// clear all hints in the hint table hint_plan.hints
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `conn`: The postgres connection
     pub fn init_hint_table(&mut self, conn: &mut Client) {
         // conn.execute("TRUNCATE TABLE IF EXISTS hint_plan.hints", &[])
@@ -97,34 +99,40 @@ impl Optimizer {
         // });
         conn.execute("SET pg_hint_plan.enable_hint_table='off'", &[])
             .unwrap_or_else(|e| {
-            eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
-            0
-        });
+                eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
+                0
+            });
         conn.execute("DROP EXTENSION IF EXISTS pg_hint_plan CASCADE", &[])
             .unwrap_or_else(|e| {
-            eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
-            0
-        });
+                eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
+                0
+            });
         conn.execute("CREATE EXTENSION IF NOT EXISTS pg_hint_plan", &[])
             .unwrap_or_else(|e| {
-            eprintln!("Failed to create pg_hint_plan extension: {}", e.to_string());
-            0
-        });
+                eprintln!("Failed to create pg_hint_plan extension: {}", e.to_string());
+                0
+            });
         conn.execute("SET pg_hint_plan.enable_hint_table='on'", &[])
             .unwrap_or_else(|e| {
-            eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
-            0
-        });
+                eprintln!("Failed to drop pg_hint_plan extension: {}", e.to_string());
+                0
+            });
     }
 
     /// add a hint to the hint table
-    /// 
+    ///
     /// # Arguments
-    /// 
+    ///
     /// * `query_id`: the query identifier obtained via `EXPLAIN VERBOSE`
     /// * `hints`: The hints to add as String
     /// * `application_name`: optional, the value of application_name where sessions can apply a hint. if not specified, hint will apply to all applications
-    fn add_hint_table(&mut self, conn: &mut Client, query_id: i64, application_name: &str, hints: &str) {
+    fn add_hint_table(
+        &mut self,
+        conn: &mut Client,
+        query_id: i64,
+        application_name: &str,
+        hints: &str,
+    ) {
         if hints.is_empty() {
             return;
         }
@@ -136,7 +144,12 @@ impl Optimizer {
         });
     }
 
-    fn add_hint_table_query(&mut self, query_id: i64, application_name: &str, hints: &str) -> String {
+    fn add_hint_table_query(
+        &mut self,
+        query_id: i64,
+        application_name: &str,
+        hints: &str,
+    ) -> String {
         format!("INSERT INTO hint_plan.hints(query_id, application_name, hints) VALUES ({}, '{}', '{}');", query_id, application_name, hints)
     }
 
@@ -159,7 +172,15 @@ impl Optimizer {
                 }
             }
         }
+
+        self.reset_rules();
         pg_hint_list
+    }
+
+    fn reset_rules(&mut self) {
+        for rule in &mut self.rules {
+            rule.reset();
+        }
     }
 }
 
@@ -263,8 +284,15 @@ mod test_optimizer {
         let sql = std::fs::read_to_string("resources/test_sql/nlj_rule_test.sql")
             .expect("Failed to read input file");
         // insert hints into hint table
-        let result = optimizer.optimize(&sql, &mut conn, true, true, application_name).unwrap();
-        assert_eq!(result.get_hints().unwrap().size(), 2, "expected 2 hints, got {}", result.get_hints().unwrap().size());
+        let result = optimizer
+            .optimize(&sql, &mut conn, true, true, application_name)
+            .unwrap();
+        assert_eq!(
+            result.get_hints().unwrap().size(),
+            2,
+            "expected 2 hints, got {}",
+            result.get_hints().unwrap().size()
+        );
         // run query again, should have hints applied
         let query = Query::new(sql.to_string(), None, optimizer.default_timeout.clone());
         let plan = query.get_plan(&mut conn, false).unwrap();
@@ -275,8 +303,4 @@ mod test_optimizer {
             plan
         );
     }
-
 }
-
-
-
