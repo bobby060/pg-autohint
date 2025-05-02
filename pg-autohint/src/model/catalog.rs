@@ -5,13 +5,13 @@ use std::collections::HashMap;
 #[derive(PartialEq, Eq, Serialize)]
 pub struct Catalog {
     pub tables: HashMap<String, Table>,
-    pub indexes: HashMap<String, String>, // index_name -> table_name
+    pub indexes: HashMap<String, Index>, // index_name -> index
 }
 
 impl Catalog {
     pub fn new(conn: &mut Client) -> Self {
         let mut tables: HashMap<String, Table> = HashMap::new();
-        let mut indexes: HashMap<String, String> = HashMap::new();
+        let mut indexes: HashMap<String, Index> = HashMap::new();
 
         // First collect all tables
         conn.query(
@@ -29,22 +29,45 @@ WHERE schemaname != 'pg_catalog' AND
                 table_name.clone(),
                 Table {
                     name: table_name,
-                    columns: vec![],
+                    indexes: vec![],
                 },
             );
         });
 
         // Then collect all indexes
-        for table_name in tables.keys() {
+        let table_names = tables.keys().cloned().collect::<Vec<String>>();
+        for table_name in table_names {
             let index_list = conn
                 .query(
                     "SELECT * FROM pg_catalog.pg_indexes WHERE tablename = $1",
-                    &[table_name],
+                    &[&table_name],
                 )
                 .unwrap();
             for index in index_list {
                 let index_name: String = index.get("indexname");
-                indexes.insert(index_name, table_name.clone());
+                let index_def: String = index.get("indexdef");
+                let columns: Vec<String> = index_def
+                    .split("(")
+                    .nth(1)
+                    .unwrap()
+                    .split(")")
+                    .nth(0)
+                    .unwrap()
+                    .split(",")
+                    .map(|s| s.trim().to_string())
+                    .collect();
+                indexes.insert(
+                    index_name.clone(),
+                    Index {
+                        table_name: table_name.clone(),
+                        columns,
+                    },
+                );
+                tables
+                    .get_mut(&table_name)
+                    .unwrap()
+                    .indexes
+                    .push(index_name);
             }
         }
 
@@ -52,10 +75,16 @@ WHERE schemaname != 'pg_catalog' AND
     }
 }
 
-#[derive(Hash, PartialEq, Eq, Serialize, Deserialize, Clone)]
+#[derive(Hash, PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
 pub struct Table {
-    name: String,
-    columns: Vec<String>,
+    pub name: String,
+    pub indexes: Vec<String>,
+}
+
+#[derive(Hash, PartialEq, Eq, Serialize, Deserialize, Clone, Debug)]
+pub struct Index {
+    pub table_name: String,
+    pub columns: Vec<String>,
 }
 
 #[cfg(test)]
@@ -73,7 +102,15 @@ mod test_catalog {
         let catalog = Catalog::new(&mut conn);
         assert!(catalog.tables.contains_key("test"));
         assert!(catalog.indexes.contains_key("test_index"));
-        assert_eq!(catalog.indexes.get("test_index"), Some(&"test".to_string()));
+        assert_eq!(
+            catalog.indexes.get("test_index"),
+            Some(&Index {
+                table_name: "test".to_string(),
+                columns: vec!["id".to_string()],
+            })
+        );
+
+        assert_eq!(catalog.tables.get("test").unwrap().indexes.len(), 1);
 
         conn.query("DROP INDEX test_index", &[]).unwrap();
         conn.query("DROP TABLE test", &[]).unwrap();
