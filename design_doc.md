@@ -33,21 +33,17 @@ Obviously, the cost of executing AutoHint prior to every query a system executes
 The optimizer doesn't actually use plan2ast right now, but it serves as an important proof of concept for our future physical plan to SQL adapter work.
 
 
-## Glossary (Optional)
-
->If you are introducing new concepts or giving unintuitive names to components, write them down here.
 
 ## Architectural Design
->Explain the input and output of the component, describe interactions and breakdown the smaller components if any. Include diagrams if appropriate.
 
-TODO: put this into a graph
+
 - Connector: Connects to a postgres DB and retreives query plan (either with EXPLAIN or EXPLAIN ANALYZE) as JSON 
 - Postgres Plan (`postgresplan.rs`): Serialize postgres plan to a struct representation of Postgres Plan `PlanNode`
 - Optimizer (`optimize.rs`): Applies a list of `Rule` to a `PlanNode` and outputs the list of hints prepended to original sql
-- Rule (`rule.rs`, `rules/`): Extensible rules that visits the `PlanNode` tree and produce hints. Each rule implements the `Rule` trait and defines a `apply` method that takes a `PlanNode` and returns produced hints. Rules can be categorized into:
-  - **TODO**: *Access Method Rules*: Modify scan nodes to suggest specific index or sequential scans.
-  - *Join Algorithm Rules*: Suggest join strategies like nested loop, hash join, or merge join based on conditions.
-  - **TODO**: *Join Order Rule*: Reorder joins to optimize query execution based on estimated costs.
+- Rule (`rule.rs`, `rules/`): Extensible rules that visits the `PlanNode` tree and produce hints. Each rule implements the `Rule` trait and defines a `apply` method that takes a `PlanNode` and returns produced hints. Two rules are fully implemented, one is partially implemented
+  1. NLJ to Hash Join: Identifies Nested Loop Joins whose estimated cardinality is off by a large factor from actual cardinality and converts to Hash Joins
+  2. Cardinality injection. Injects the actual cardinality of joins back into the plan after analyzing
+  3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index. Currently only works on single indexes. Still in progress.
 - Plan2ast ('`plan2ast.rs`): Converter that takes a `PlanRoot` as input and outputs the equivalent Datafusion Abstract Syntax Tree that converts to SQL query (incomplete and proof of concept)
     - Supports visiting and cleaning the tree of `PlanNode` to exclude nodes that are not needed for rel2sql convertsion, e.g. `Gather`, `Hash`
     - Supports visiting the following types of `PlanNode` and converting them to a corresponding datafusion ast nodes
@@ -55,14 +51,7 @@ TODO: put this into a graph
     - Reuses datafusion ast functionality to convert the constructed ast into SQL query.
 - Postgres Connector (`connector.rs`): Uses postgres crate to expose a simple API to connect to a Postgres DB, convert a sql string to a PlanNode, and converte a SQL file to a JSON file of the corresponding plan.
 
-### Current Rules:
-1. NLJ to Hash Join: Identifies Nested Loop Joins whose estimated cardinality is off by a large factor from actual cardinality and converts to Hash Joins
-2. Cardinality injection. Injects the actual cardinality of joins back into the plan after analyzing
-3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index
-
-
 ## Design Rationale
->Explain the goals of this design and how the design achieves these goals. Present alternatives considered and document why they are not chosen.
 
 Current design: process plan and provide a list of hints that can be prepended to original sql. In this design, we parse and traverse the Postgres plan, applying the rules to produce hints, but do not have to convert that plan back into an AST. This works well for identifying errors in the Postgres plan that can be resolved through hints without modifying the underlying SQL.
 
@@ -81,23 +70,24 @@ Alternative design considered: converting the physical plan to a Datafusion AST,
     
     We are in the process of adding unit tests for each module which do not require a Postgres database.
 
+    We document code coverage with [cargo-llvm-cov](https://lib.rs/crates/cargo-llvm-cov). We are currently at X% coverage.
+
+
 ### JOB
+We also ran the full Join Ordering Benchmark using AutoHint, mainly to test the impact of cardinality injection. Broadly, we found a significant improvement using AutoHint on single-core Postgres, but the improvement was negligible using multi-core settings.
 
 
-We will document code coverage with [cargo-llvm-cov](https://lib.rs/crates/cargo-llvm-cov). We are currently at X% coverage.
 
 ## Trade-offs and Potential Problems
 >Write down any conscious trade-off you made that can be problematic in the future, or any problems discovered during the design process that remain unaddressed (technical debts).
-- TODO: Talk about difficulty of creating rules to optimize. This is what we will focus on the most for the rest of the semester
 
 - Lack of completeness for plan2ast implementation. 
+- Hint table support only works in Postgres 17 due to changes in how the hint table works between versions 16 and 17
 
 
 ## Future Work
 - Add more rules
-- Implement hints for row number corrections when estimates differ from actual execution.
-- Continue implementation of plan2ast converter to fully support subqueries, set operations, and edge cases.
-- Complete documentation to make this framework very accessible
-- Use the hint table to store hints for prepared queries rather than recomputing the prepared query
+- Continue implementation of plan2ast converter to fully support subqueries, set operations, and edge cases. This could enable adjustments by making queries more explicit through SQL rewriting.
 - Add explicit prepare query function that runs a query through autohint and saves it as a prepared query
+- Use an external optimizer to generate better row estimates than Postgres without actually having to run the query (e.g. optd, Calcite)
 

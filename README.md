@@ -8,19 +8,31 @@ Currently two rules are fully implemented with one in progress:
 
 1. NLJ to Hash Join: Identifies Nested Loop Joins whose estimated cardinality is off by a large factor from actual cardinality and converts to Hash Joins
 2. Cardinality injection. Injects the actual cardinality of joins back into the plan after analyzing
-3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index
+3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index. Currently only works on single indexes. Still in progress.
 
 Additional patterns should be easy to implement.
 
 
 We support both running hints that are in the query and also saving hints to the hint table so they are automatically applied when the query is run in the future.
 
+AutoHint provides the ability to save hints in the hint table. This will allow future runs of a query to use the hints without being explicitly included in the query. Only works in Postgres 17.
 
 
+Simple example:
+```
+    let mut conn = establish_connection("imdbload", "postgres", "postgres", "localhost", "5432");
+    let mut opt = Optimizer::new(true, None);
+
+    opt.add_rule(Box::new(rules::NljToHashJoin::new(1.0, 1500)));
+    opt.add_rule(Box::new(rules::CardCorrection::new()));
+
+    let query = "SELECT * FROM table;"
 
 
+    opt.optimize(query, conn, true); 
+```
 
-
+See `job_benchmark/src/main.rs` for a more detailed example.
 
 
 ## Get started
@@ -61,6 +73,8 @@ Then copy the imdb_postgres_setup.sh to that user and run as postgres. I did thi
 
 
 Now you can access imdb with `psql -d imdb` from your normal user
+
+Tests will not pass unless you load the test dataset
 
 Run all tests
 ```cargo test```
