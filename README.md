@@ -2,6 +2,9 @@
 
 AutoHint is  system designed to enable using pg_hint_plan to implement heuristic, rules-based improvements to Postgres query plans.
 
+Created as a class project for 15-799: Special Topics in Query Optimization at Carnegie Mellon University
+
+
 At a high level, AutoHint either plans a query (or plans and executes a query) on Postgres, then uses rules to identify problems with the Postgres plan. Each rule generates a list of query hints designed to improve the plan.
 
 Currently two rules are fully implemented with one in progress:
