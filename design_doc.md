@@ -13,6 +13,12 @@ The result is AutoHint: an extensible method of identifying poor Postgres query 
 
 Obviously, the cost of executing AutoHint prior to every query a system executes would be prohibative, but it is practical for prepared statements or other queries that have caused problems.
 
+Currently two rules are fully implemented with one in progress:
+
+1. NLJ to Hash Join: Identifies Nested Loop Joins whose estimated cardinality is off by a large factor from actual cardinality and converts to Hash Joins
+2. Cardinality injection. Injects the actual cardinality of joins back into the plan after analyzing
+3. Index selection (partially implemented). Tries to fix the case where an ORDER BY causes postgres to pick the wrong index. Currently only works on single indexes. Still in progress.
+
 
 ## Scope
 
