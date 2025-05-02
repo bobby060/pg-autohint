@@ -37,6 +37,17 @@ Simple example:
 
 See `job_benchmark/src/main.rs` for a more detailed example.
 
+Results of running AutoHint on the Join Ordering Benchmark, single core Postgres 17.  9 queries time out in original, 11 time out in the AutoHinted version.
+
+![image](https://github.com/user-attachments/assets/6d5bbf40-0b1b-4438-8bb1-51a60e11e9fa)
+
+
+Distribution of improvement, binned by ratio of AutoHint/original
+![image](https://github.com/user-attachments/assets/7c83950b-fd38-4802-93a1-ea24ddaa35ff)
+
+
+
+
 
 ## Get started
 
